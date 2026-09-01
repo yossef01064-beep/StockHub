@@ -140,6 +140,13 @@ fun FatateerApp(
                             icon = { Icon(Icons.Default.ShoppingCart, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        NavigationDrawerItem(
+                            label = { Text(s.salesLogTitle) },
+                            selected = showLog,
+                            onClick = { showLog = true; drawerScope.launch { drawerState.close() } },
+                            icon = { Icon(Icons.Default.ListAlt, null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         Spacer(Modifier.height(20.dp))
                         Divider()
                         Spacer(Modifier.height(20.dp))
@@ -170,24 +177,7 @@ fun FatateerApp(
                             }
                         },
                         actions = {
-                            if (!showSettings && !showLowStock && currentTab != MainTab.HOME) {
-                                var menuOpen by remember { mutableStateOf(false) }
-                                IconButton(onClick = { menuOpen = true }) {
-                                    Icon(Icons.Default.Menu, contentDescription = s.categories)
-                                }
-                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text(s.allCategories, fontWeight = if (state.selectedCategory == null) FontWeight.Bold else FontWeight.Normal) },
-                                        onClick = { vm.setCategory(null); menuOpen = false }
-                                    )
-                                    chipCats.forEach { cat ->
-                                        DropdownMenuItem(
-                                            text = { Text(displayLabel(cat, s), fontWeight = if (state.selectedCategory == cat) FontWeight.Bold else FontWeight.Normal) },
-                                            onClick = { vm.setCategory(cat); menuOpen = false }
-                                        )
-                                    }
-                                }
-                            }
+                            // Removed the secondary categories menu as it was redundant
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -213,10 +203,19 @@ fun FatateerApp(
                 }
             ) { padding ->
                 Box(modifier = Modifier.padding(padding)) {
-                    when {
-                        showSettings -> SettingsScreen(modifier = Modifier.fillMaxSize().padding(16.dp), onOpenLog = { showLog = true })
-                        showLowStock -> LowStockScreen(items = state.neededItems, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp))
-                        else -> HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                    if (showLog) {
+                        SaleLogPage(
+                            logs = logs,
+                            onBack = { showLog = false },
+                            onDeleteLog = { vm.deleteSaleLog(it) },
+                            onClearAll = { vm.clearLogs() }
+                        )
+                    } else if (showSettings) {
+                        SettingsScreen(modifier = Modifier.fillMaxSize().padding(16.dp))
+                    } else if (showLowStock) {
+                        LowStockScreen(items = state.neededItems, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp))
+                    } else {
+                        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                             when (MainTab.values()[page]) {
                                 MainTab.HOME -> HomeScreen(state = state, modifier = Modifier.fillMaxSize().padding(16.dp), onOpenSpare = { goToTab(MainTab.SPARE) }, onOpenSales = { goToTab(MainTab.SALES) }, onOpenLowStock = { showLowStock = true })
                                 MainTab.SPARE, MainTab.SALES -> InventoryScreen(
@@ -228,21 +227,12 @@ fun FatateerApp(
                             }
                         }
                     }
-                    if (showNew) {
-                        ItemEditorDialog(title = s.addItem, initial = Item(name = "", category = state.selectedCategory ?: defaultCategory, subCategory = "", brand = "", quantity = 0, minQuantity = 1), allowedCategories = Categories.all, askMainSection = true, onDismiss = { showNew = false }, onSave = { vm.save(it); showNew = false })
-                    }
-                    editor?.let { current ->
-                        ItemEditorDialog(title = s.edit, initial = current, allowedCategories = Categories.all, askMainSection = true, onDismiss = { editor = null }, onSave = { vm.save(it); editor = null })
-                    }
-                    toDelete?.let { item ->
-                        AlertDialog(onDismissRequest = { toDelete = null }, title = { Text(s.deleteConfirmTitle) }, text = { Text(s.deleteConfirmBody.replace("%s", item.name)) }, confirmButton = { TextButton(onClick = { vm.delete(item); toDelete = null }) { Text(s.delete) } }, dismissButton = { TextButton(onClick = { toDelete = null }) { Text(s.cancel) } })
-                    }
-                    if (showLog) {
-                        SaleLogScreen(logs = logs, onDismiss = { showLog = false }, onClear = { vm.clearLogs() })
-                    }
                     val currentItemToSell = itemToSell
                     if (currentItemToSell != null) {
-                        SaleDialog(item = currentItemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone -> vm.recordSale(currentItemToSell, qty, custName, custPhone); itemToSell = null })
+                        SaleDialog(item = currentItemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
+                            vm.recordSale(currentItemToSell, qty, custName, custPhone, totalPrice); 
+                            itemToSell = null 
+                        })
                     }
                 }
             }
@@ -269,10 +259,6 @@ private fun SettingsScreen(modifier: Modifier = Modifier, onOpenLog: () -> Unit)
                 ThemeModeRow(label = s.languageArabic, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ARABIC, onClick = { settings.updateLanguage(AppLanguage.ARABIC) })
                 ThemeModeRow(label = s.languageEnglish, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ENGLISH, onClick = { settings.updateLanguage(AppLanguage.ENGLISH) })
             }
-        }
-        Text("إدارة المبيعات", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
-            ThemeModeRow(label = "سجل المبيعات", icon = Icons.Default.ShoppingCart, selected = false, onClick = onOpenLog)
         }
     }
 }
@@ -471,17 +457,111 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
     var priceMin by remember { mutableStateOf(initial.priceMin) }
     var priceMax by remember { mutableStateOf(initial.priceMax) }
     var notes by remember { mutableStateOf(initial.notes) }
+    var imagePath by remember { mutableStateOf(initial.imagePath) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showImagePicker by remember { mutableStateOf(false) }
+
+    var expandedCat by remember { mutableStateOf(false) }
+    var expandedSub by remember { mutableStateOf(false) }
+    var expandedBrand by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let { imagePath = ImageStorage.saveImage(context, it) }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { 
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(title)
+                IconButton(onClick = { showImagePicker = true }) {
+                    Icon(Icons.Default.AddAPhoto, contentDescription = "Add Photo")
+                }
+            }
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (imagePath.isNotEmpty()) {
+                    Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(8.dp))) {
+                        AsyncImage(model = File(imagePath), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        IconButton(onClick = { imagePath = "" }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = 0.5f), CircleShape)) {
+                            Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                }
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(s.name) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text(s.category) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = subCategory, onValueChange = { subCategory = it }, label = { Text(s.subCategory) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text(s.brand) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+
+                // --- Category Dropdown ---
+                Box {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(s.category) },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = { IconButton(onClick = { expandedCat = true }) { Icon(Icons.Default.ArrowDropDown, null) } }
+                    )
+                    DropdownMenu(expanded = expandedCat, onDismissRequest = { expandedCat = false }, modifier = Modifier.fillMaxWidth(0.9f)) {
+                        allowedCategories.forEach { cat ->
+                            DropdownMenuItem(text = { Text(cat) }, onClick = { category = cat; expandedCat = false })
+                        }
+                    }
+                }
+
+                // --- SubCategory Dropdown (Dynamic based on category) ---
+                val subOptions = when (category) {
+                    "ريموتات" -> Categories.remoteGroups
+                    "عدسات رقمية" -> Categories.digitalLensBrands
+                    "عدسات دش" -> Categories.dishLensTypes
+                    else -> emptyList()
+                }
+                Box {
+                    OutlinedTextField(
+                        value = subCategory,
+                        onValueChange = { subCategory = it },
+                        label = { Text(s.subCategory) },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = { 
+                            if (subOptions.isNotEmpty()) {
+                                IconButton(onClick = { expandedSub = true }) { Icon(Icons.Default.ArrowDropDown, null) }
+                            }
+                        }
+                    )
+                    DropdownMenu(expanded = expandedSub, onDismissRequest = { expandedSub = false }, modifier = Modifier.fillMaxWidth(0.9f)) {
+                        subOptions.forEach { sub ->
+                            DropdownMenuItem(text = { Text(sub) }, onClick = { subCategory = sub; expandedSub = false })
+                        }
+                    }
+                }
+
+                // --- Brand Dropdown (Dynamic based on subCategory) ---
+                val brandOptions = when (subCategory) {
+                    "HD" -> Categories.remoteHdBrands
+                    "SD" -> Categories.remoteSdTypes
+                    "تلفزيون" -> Categories.remoteTvBrands
+                    else -> if (category == "تلفزيونات") Categories.brandsTv else emptyList()
+                }
+                Box {
+                    OutlinedTextField(
+                        value = brand,
+                        onValueChange = { brand = it },
+                        label = { Text(s.brand) },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = { 
+                            if (brandOptions.isNotEmpty()) {
+                                IconButton(onClick = { expandedBrand = true }) { Icon(Icons.Default.ArrowDropDown, null) }
+                            }
+                        }
+                    )
+                    DropdownMenu(expanded = expandedBrand, onDismissRequest = { expandedBrand = false }, modifier = Modifier.fillMaxWidth(0.9f)) {
+                        brandOptions.forEach { br ->
+                            DropdownMenuItem(text = { Text(br) }, onClick = { brand = br; expandedBrand = false })
+                        }
+                    }
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = qty, onValueChange = { if (it.all { c -> c.isDigit() }) qty = it }, label = { Text(s.quantity) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
                     OutlinedTextField(value = minQty, onValueChange = { if (it.all { c -> c.isDigit() }) minQty = it }, label = { Text(s.minQuantity) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
@@ -499,20 +579,51 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
                 if (name.isBlank()) { error = s.nameRequired }
                 else if (qty.isBlank()) { error = s.qtyRequired }
                 else {
-                    onSave(initial.copy(name = name, category = category, subCategory = subCategory, brand = brand, quantity = qty.toIntOrNull() ?: 0, minQuantity = minQty.toIntOrNull() ?: 1, priceMin = priceMin, priceMax = priceMax, notes = notes))
+                    onSave(initial.copy(name = name, category = category, subCategory = subCategory, brand = brand, quantity = qty.toIntOrNull() ?: 0, minQuantity = minQty.toIntOrNull() ?: 1, priceMin = priceMin, priceMax = priceMax, notes = notes, imagePath = imagePath))
                 }
             }) { Text(s.save) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(s.cancel) } }
     )
+
+    if (showImagePicker) {
+        AlertDialog(
+            onDismissRequest = { showImagePicker = false },
+            title = { Text("إضافة صورة") },
+            text = { Text("كيف تريد إضافة صورة العنصر؟") },
+            confirmButton = {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { 
+                        showImagePicker = false
+                        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) 
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text("من الاستوديو (التخزين)")
+                    }
+                    Button(onClick = {
+                        showImagePicker = false
+                        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text("بالكاميرا (مباشر)")
+                    }
+                }
+            },
+            dismissButton = { TextButton(onClick = { showImagePicker = false }) { Text("إلغاء") } }
+        )
+    }
 }
 
 @Composable
-fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, String) -> Unit) {
+fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, String, Double) -> Unit) {
     val s = LocalAppStrings.current
     var qty by remember { mutableStateOf("1") }
     var custName by remember { mutableStateOf("") }
     var custPhone by remember { mutableStateOf("") }
+    
+    // Determine if price is fixed or range
+    val isFixedPrice = item.priceMin == item.priceMax
+    val defaultPrice = if (isFixedPrice) item.priceMax.toDouble() else item.priceMax.toDouble()
+    var salePrice by remember { mutableStateOf(defaultPrice.toString()) }
+    
     var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -522,6 +633,13 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("الكمية المتوفرة: ${item.quantity}", fontSize = 14.sp)
                 OutlinedTextField(value = qty, onValueChange = { if (it.all { c -> c.isDigit() }) qty = it }, label = { Text("الكمية المباعة") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                
+                if (!isFixedPrice) {
+                    OutlinedTextField(value = salePrice, onValueChange = { salePrice = it }, label = { Text("سعر البيع (للقطعة)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                } else {
+                    Text("السعر الثابت: ${item.priceMax} ج.م", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
+                
                 OutlinedTextField(value = custName, onValueChange = { custName = it }, label = { Text("اسم الزبون") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 OutlinedTextField(value = custPhone, onValueChange = { custPhone = it }, label = { Text("رقم الهاتف") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), singleLine = true)
                 if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
@@ -530,9 +648,11 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
         confirmButton = {
             TextButton(onClick = {
                 val q = qty.toIntOrNull() ?: 0
+                val p = salePrice.toDoubleOrNull() ?: if (isFixedPrice) item.priceMax.toDouble() else 0.0
                 if (q <= 0) { error = "الكمية يجب أن تكون أكبر من 0" }
                 else if (q > item.quantity) { error = "الكمية المطلوبة أكبر من المتوفر" }
-                else { onConfirm(q, custName, custPhone) }
+                else if (!isFixedPrice && p <= 0.0) { error = "السعر يجب أن يكون أكبر من 0" }
+                else { onConfirm(q, custName, custPhone, p * q) }
             }) { Text("تأكيد البيع") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(s.cancel) } }
@@ -540,37 +660,162 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
 }
 
 @Composable
-fun SaleLogScreen(logs: List<com.local.fatateer.data.SaleLog>, onDismiss: () -> Unit, onClear: () -> Unit) {
+private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () -> Unit, onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit, onClearAll: () -> Unit) {
     val s = LocalAppStrings.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(s.salesLogTitle) },
-        text = {
-            Box(modifier = Modifier.fillMaxSize().horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (logs.isEmpty()) {
-                        Text(s.noSalesLogs, modifier = Modifier.padding(16.dp))
-                    } else {
-                        // Grouping and display logic
-                        val dateFormat = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US) }
-                        val grouped = logs.groupBy { dateFormat.format(java.util.Date(it.timestamp)) }
-                        grouped.forEach { (date, dayLogs) ->
-                            Text(date, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            dayLogs.forEach { log ->
-                                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                    Column(Modifier.padding(8.dp)) {
-                                        Text("${log.itemName} - ${log.quantity} قطعة", fontWeight = FontWeight.SemiBold)
-                                        Text("السعر: ${log.price} | الزبون: ${log.customerName}", fontSize = 12.sp)
+    var filterMode by remember { mutableStateOf(FilterMode.DAILY) }
+    var showDetails by remember { mutableStateOf<com.local.fatateer.data.SaleLog?>(null) }
+    var selectionMode by remember { mutableStateOf(false) }
+    val selectedLogs = remember { mutableStateListOf<com.local.fatateer.data.SaleLog>() }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            if (selectionMode) {
+                IconButton(onClick = { selectionMode = false; selectedLogs.clear() }) { Icon(Icons.Default.Close, contentDescription = "Cancel") }
+            } else {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+            }
+            Text(if (selectionMode) "حذف المبيعات" else s.salesLogTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            if (selectionMode) {
+                TextButton(
+                    onClick = { 
+                        selectedLogs.forEach { onDeleteLog(it) }
+                        selectedLogs.clear()
+                        selectionMode = false
+                    },
+                    enabled = selectedLogs.isNotEmpty(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("تم الحذف", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                IconButton(onClick = onClearAll) { Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = MaterialTheme.colorScheme.error) }
+            }
+        }
+
+        if (!selectionMode) {
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
+                SingleChoiceSegmentedButtonRow {
+                    SegmentedButton(selected = filterMode == FilterMode.DAILY, onClick = { filterMode = FilterMode.DAILY }, shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)) {
+                        Text("يومي")
+                    }
+                    SegmentedButton(selected = filterMode == FilterMode.MONTHLY, onClick = { filterMode = FilterMode.MONTHLY }, shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)) {
+                        Text("شهري")
+                    }
+                }
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
+            if (logs.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(s.noSalesLogs) }
+            } else {
+                val dateFormat = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US) }
+                val monthFormat = remember { java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US) }
+                val grouped = if (filterMode == FilterMode.DAILY) logs.groupBy { dateFormat.format(java.util.Date(it.timestamp)) } else logs.groupBy { monthFormat.format(java.util.Date(it.timestamp)) }
+
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    grouped.forEach { (period, periodLogs) ->
+                        val total = periodLogs.sumOf { it.price.toDouble() }
+                        item {
+                            TimelineGroup(
+                                period = period, 
+                                logs = periodLogs, 
+                                total = total, 
+                                selectionMode = selectionMode,
+                                selectedLogs = selectedLogs,
+                                onLogClick = { 
+                                    if (selectionMode) {
+                                        if (selectedLogs.contains(it)) selectedLogs.remove(it) else selectedLogs.add(it)
+                                    } else {
+                                        showDetails = it 
                                     }
+                                },
+                                onDeleteClick = { 
+                                    if (!selectionMode) { selectionMode = true; selectedLogs.add(it) }
                                 }
-                            }
-                            Divider()
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+
+    if (showDetails != null) {
+        SaleDetailDialog(log = showDetails!!, onDismiss = { showDetails = null })
+    }
+}
+
+@Composable
+private fun TimelineGroup(
+    period: String, 
+    logs: List<com.local.fatateer.data.SaleLog>, 
+    total: Double, 
+    selectionMode: Boolean,
+    selectedLogs: MutableList<com.local.fatateer.data.SaleLog>,
+    onLogClick: (com.local.fatateer.data.SaleLog) -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+            Box(Modifier.size(12.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Text(period, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
+        Column(modifier = Modifier.padding(start = 10.dp)) {
+            logs.forEach { log ->
+                Card(
+                    onClick = { onLogClick(log) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (selectedLogs.contains(log)) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${log.itemName} (${log.quantity})", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                        Text("${log.price} ج.م", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        if (!selectionMode) {
+                            IconButton(onClick = { onDeleteClick() }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+            }
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("إجمالي الفترة:", fontWeight = FontWeight.Bold)
+                    Text("${total} ج.م", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SaleDetailDialog(log: com.local.fatateer.data.SaleLog, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("تفاصيل عملية البيع") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                DetailRow("الصنف", log.itemName)
+                DetailRow("الكمية", "${log.quantity}")
+                DetailRow("السعر الإجمالي", "${log.price} ج.م")
+                DetailRow("الزبون", log.customerName)
+                DetailRow("الهاتف", log.customerPhone)
+                DetailRow("التاريخ", java.text.DateFormat.getDateTimeInstance().format(java.util.Date(log.timestamp)))
+            }
         },
-        confirmButton = { TextButton(onClick = { onClear(); onDismiss() }) { Text("مسح السجل") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(s.cancel) } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text("إغلاق") } }
     )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontWeight = FontWeight.Bold)
+    }
 }
