@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -45,6 +47,7 @@ import com.local.fatateer.data.Item
 import com.local.fatateer.ui.locale.*
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -494,6 +497,16 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
         }
     }
 
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        val capturedUri = cameraImageUri
+        if (success && capturedUri != null) {
+            scope.launch {
+                imagePath = ImageStorage.copyToAppStorage(context, capturedUri) ?: imagePath
+            }
+        }
+    }
+
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -627,7 +640,10 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
                     }
                     Button(onClick = {
                         showImagePicker = false
-                        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        val photoFile = File(context.cacheDir, "camera_${UUID.randomUUID()}.jpg")
+                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+                        cameraImageUri = uri
+                        cameraLauncher.launch(uri)
                     }, modifier = Modifier.fillMaxWidth()) {
                         Text("بالكاميرا (مباشر)")
                     }
@@ -745,7 +761,7 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
 
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     grouped.forEach { (period, periodLogs) ->
-                        val total = periodLogs.sumOf { it.price.toDouble() }
+                        val total = periodLogs.sumOf { it.price.trim().split(" - ").firstOrNull()?.trim()?.toDoubleOrNull() ?: 0.0 }
                         item {
                             TimelineGroup(
                                 period = period, 
@@ -771,8 +787,8 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
         }
     }
 
-    if (showDetails != null) {
-        SaleDetailDialog(log = showDetails!!, onDismiss = { showDetails = null })
+    showDetails?.let { log ->
+        SaleDetailDialog(log = log, onDismiss = { showDetails = null })
     }
 }
 
