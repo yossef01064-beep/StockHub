@@ -51,6 +51,7 @@ fun FatateerApp(
     val settings = LocalSettingsController.current
     val s = LocalAppStrings.current
     val state by vm.state.collectAsStateWithLifecycle()
+    val logs by vm.salesLogs.collectAsStateWithLifecycle(initialValue = emptyList())
     var editor by remember { mutableStateOf<Item?>(null) }
     var showNew by remember { mutableStateOf(false) }
     var toDelete by remember { mutableStateOf<Item?>(null) }
@@ -237,10 +238,11 @@ fun FatateerApp(
                         AlertDialog(onDismissRequest = { toDelete = null }, title = { Text(s.deleteConfirmTitle) }, text = { Text(s.deleteConfirmBody.replace("%s", item.name)) }, confirmButton = { TextButton(onClick = { vm.delete(item); toDelete = null }) { Text(s.delete) } }, dismissButton = { TextButton(onClick = { toDelete = null }) { Text(s.cancel) } })
                     }
                     if (showLog) {
-                        SaleLogScreen(logs = state.salesLogs, onDismiss = { showLog = false }, onClear = { vm.clearLogs() })
+                        SaleLogScreen(logs = logs, onDismiss = { showLog = false }, onClear = { vm.clearLogs() })
                     }
-                    if (itemToSell != null) {
-                        SaleDialog(item = itemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone -> vm.recordSale(itemToSell!!, qty, custName, custPhone); itemToSell = null })
+                    val currentItemToSell = itemToSell
+                    if (currentItemToSell != null) {
+                        SaleDialog(item = currentItemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone -> vm.recordSale(currentItemToSell, qty, custName, custPhone); itemToSell = null })
                     }
                 }
             }
