@@ -329,10 +329,34 @@ private fun MiniStat(title: String, value: String, modifier: Modifier = Modifier
 @Composable
 private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery: (String) -> Unit, onCategory: (String?) -> Unit, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, modifier: Modifier = Modifier) {
     val s = LocalAppStrings.current
+    var selectionMode by remember { mutableStateOf(false) }
+    val selectedItems = remember { mutableStateListOf<Item>() }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
     Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+            if (selectionMode) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { selectionMode = false; selectedItems.clear() }) { Icon(Icons.Default.Close, contentDescription = "Cancel") }
+                    Text("حذف المنتجات (${selectedItems.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+                TextButton(
+                    onClick = { showDeleteConfirm = true },
+                    enabled = selectedItems.isNotEmpty(),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("حذف المحدد", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                IconButton(onClick = { selectionMode = true }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Start Delete Mode", tint = MaterialTheme.colorScheme.error)
+                }
+                Text(if (state.selectedCategory == null && state.query.isBlank()) s.categories else (state.selectedCategory?.let { displayLabel(it, s) } ?: s.search), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Spacer(Modifier.width(48.dp)) 
+            }
+        }
+
         if (state.selectedCategory == null && state.query.isBlank()) {
-            Text(s.categories, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.height(6.dp))
             Text(s.lowCountLabel.replace("%d", state.filtered.count { it.quantity <= it.minQuantity }.toString()), fontWeight = FontWeight.SemiBold, color = if (state.filtered.any { it.quantity <= it.minQuantity }) lowStockContent() else MaterialTheme.colorScheme.onBackground)
             Spacer(Modifier.height(12.dp))
             LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
@@ -349,8 +373,6 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                 }
             }
         } else {
-            Text(state.selectedCategory?.let { displayLabel(it, s) } ?: s.search, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Spacer(Modifier.height(8.dp))
             OutlinedTextField(value = state.query, onValueChange = onQuery, modifier = Modifier.fillMaxWidth(), placeholder = { Text(s.search) }, leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true)
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = { onCategory(null); onQuery("") }) { Text(s.backToOverview) }
@@ -360,10 +382,35 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
             } else {
                 LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
                     gridItems(state.filtered, key = { it.id }) { item ->
-                        ItemCard(item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSell = { onSell(item) })
+                        ItemCard(
+                            item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) },
+                            isSelected = selectionMode && selectedItems.contains(item),
+                            onSelect = { 
+                                if (selectionMode) {
+                                    if (selectedItems.contains(item)) selectedItems.remove(item) else selectedItems.add(item)
+                                }
+                            }
+                        )
                     }
                 }
             }
+        }
+
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text("تأكيد الحذف") },
+                text = { Text("هل تريد حذف ${selectedItems.size} من المنتجات المحددة؟") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        selectedItems.forEach { onDelete(it) }
+                        selectedItems.clear()
+                        selectionMode = false
+                        showDeleteConfirm = false
+                    }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(s.cancel) } }
+            )
         }
     }
 }
@@ -429,10 +476,16 @@ private fun lowStockContainer(): Color = if (MaterialTheme.colorScheme.backgroun
 private fun lowStockContent(): Color = if (MaterialTheme.colorScheme.background.red < 0.2f) Color(0xFFFF8A80) else Color(0xFFC44536)
 
 @Composable
-private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit, isSelected: Boolean = false) {
+private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit, isSelected: Boolean = false, onSelect: () -> Unit) {
     val s = LocalAppStrings.current
     val low = item.quantity <= item.minQuantity
-    Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else if (low) lowStockContainer() else MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = { onSelect() },
+        shape = RoundedCornerShape(14.dp), 
+        colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else if (low) lowStockContainer() else MaterialTheme.colorScheme.surface), 
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), 
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(Modifier.padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
@@ -440,9 +493,12 @@ private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit
                     Spacer(Modifier.width(8.dp))
                     Text(item.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, modifier = Modifier.weight(1f))
                 }
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Edit, contentDescription = s.edit, modifier = Modifier.size(16.dp)) }
                     IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Delete, contentDescription = s.delete, modifier = Modifier.size(16.dp)) }
+                    if (isSelected) {
+                        Checkbox(checked = true, onCheckedChange = { onSelect() })
+                    }
                 }
             }
             if (item.brand.isNotBlank() || item.subCategory.isNotBlank()) {
