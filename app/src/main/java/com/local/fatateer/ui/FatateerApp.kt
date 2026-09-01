@@ -359,31 +359,10 @@ private fun MiniStat(title: String, value: String, modifier: Modifier = Modifier
 @Composable
 private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery: (String) -> Unit, onCategory: (String?) -> Unit, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, modifier: Modifier = Modifier) {
     val s = LocalAppStrings.current
-    var selectionMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<Item>() }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-            if (selectionMode) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { selectionMode = false; selectedItems.clear() }) { Icon(Icons.Default.Close, contentDescription = "Cancel") }
-                    Text("حذف المنتجات (${selectedItems.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
-                TextButton(
-                    onClick = { showDeleteConfirm = true },
-                    enabled = selectedItems.isNotEmpty(),
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("حذف المحدد", fontWeight = FontWeight.Bold)
-                }
-            } else {
-                IconButton(onClick = { selectionMode = true }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Start Delete Mode", tint = MaterialTheme.colorScheme.error)
-                }
-                Text(if (state.selectedCategory == null && state.query.isBlank()) s.categories else (state.selectedCategory?.let { displayLabel(it, s) } ?: s.search), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Spacer(Modifier.width(48.dp)) 
-            }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+            Text(if (state.selectedCategory == null && state.query.isBlank()) s.categories else (state.selectedCategory?.let { displayLabel(it, s) } ?: s.search), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
 
         if (state.selectedCategory == null && state.query.isBlank()) {
@@ -414,33 +393,12 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                     gridItems(state.filtered, key = { it.id }) { item ->
                         ItemCard(
                             item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSell = { onSell(item) },
-                            isSelected = selectionMode && selectedItems.contains(item),
-                            onSelect = { 
-                                if (selectionMode) {
-                                    if (selectedItems.contains(item)) selectedItems.remove(item) else selectedItems.add(item)
-                                }
-                            }
+                            isSelected = false,
+                            onSelect = {}
                         )
                     }
                 }
             }
-        }
-
-        if (showDeleteConfirm) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirm = false },
-                title = { Text("تأكيد الحذف") },
-                text = { Text("هل تريد حذف ${selectedItems.size} من المنتجات المحددة؟") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        selectedItems.forEach { onDelete(it) }
-                        selectedItems.clear()
-                        selectionMode = false
-                        showDeleteConfirm = false
-                    }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
-                },
-                dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(s.cancel) } }
-            )
         }
     }
 }
