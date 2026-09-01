@@ -335,6 +335,7 @@ sealed class AppStrings {
             "فلانشات طبق" to "Dish flanges",
             "إكسسوار دش" to "Dish accessories",
             "بطاريات قلم 1.5V" to "1.5V AA batteries",
+            "سماعات" to "Speakers",
             // Remote groups
             "HD" to "HD",
             "SD" to "SD",

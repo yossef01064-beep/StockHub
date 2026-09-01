@@ -398,6 +398,7 @@ private fun categoryIcon(category: String): ImageVector {
         "فلانشات طبق" -> Icons.Default.Category
         "إكسسوار دش" -> Icons.Default.Inventory2
         "بطاريات قلم 1.5V" -> Icons.Default.BatteryStd
+        "سماعات" -> Icons.Default.Speaker
         else -> Icons.Default.Category
     }
 }
@@ -551,7 +552,8 @@ fun SaleLogScreen(logs: List<com.local.fatateer.data.SaleLog>, onDismiss: () -> 
                         Text(s.noSalesLogs, modifier = Modifier.padding(16.dp))
                     } else {
                         // Grouping and display logic
-                        val grouped = logs.groupBy { java.time.Instant.ofEpochMilli(it.timestamp).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString() }
+                        val dateFormat = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US) }
+                        val grouped = logs.groupBy { dateFormat.format(java.util.Date(it.timestamp)) }
                         grouped.forEach { (date, dayLogs) ->
                             Text(date, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             dayLogs.forEach { log ->

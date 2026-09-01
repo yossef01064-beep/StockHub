@@ -33,7 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** يضيف جدول سجل المبيعات */
         private val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE IF NOT EXISTS `sale_logs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `itemName` TEXT NOT NULL, `category` TEXT NOT NULL, `price` TEXT NOT NULL, `quantity` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `sale_logs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `itemName` TEXT NOT NULL, `category` TEXT NOT NULL, `price` TEXT NOT NULL, `quantity` INTEGER NOT NULL, `customerName` TEXT NOT NULL DEFAULT '', `customerPhone` TEXT NOT NULL DEFAULT '', `timestamp` INTEGER NOT NULL)")
             }
         }
 
