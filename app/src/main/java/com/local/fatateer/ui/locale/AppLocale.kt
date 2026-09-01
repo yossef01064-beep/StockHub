@@ -36,27 +36,27 @@ enum class ThemeMode(val prefsValue: String) {
 class SettingsController(context: Context) {
     private val prefs = context.getSharedPreferences("fatateer_settings", Context.MODE_PRIVATE)
 
-    var language by mutableStateOf(
+    private var _language by mutableStateOf(
         when (prefs.getString("lang", "ar")) {
             "en" -> AppLanguage.ENGLISH
             else -> AppLanguage.ARABIC
         }
     )
-        private set
+    val language: AppLanguage get() = _language
 
-    var themeMode by mutableStateOf(ThemeMode.fromPrefs(prefs.getString("theme_mode", "system")))
-        private set
+    private var _themeMode by mutableStateOf(ThemeMode.fromPrefs(prefs.getString("theme_mode", "system")))
+    val themeMode: ThemeMode get() = _themeMode
 
     val strings: AppStrings
         get() = if (language == AppLanguage.ENGLISH) AppStrings.En else AppStrings.Ar
 
     fun setLanguage(lang: AppLanguage) {
-        language = lang
+        _language = lang
         prefs.edit().putString("lang", lang.code).apply()
     }
 
     fun setThemeMode(mode: ThemeMode) {
-        themeMode = mode
+        _themeMode = mode
         prefs.edit().putString("theme_mode", mode.prefsValue).apply()
     }
 
