@@ -234,8 +234,7 @@ fun FatateerApp(
                             }
                         }
                     }
-                    if (itemToSell != null) {
-                        val currentItem = itemToSell
+                    itemToSell?.let { currentItem ->
                         SaleDialog(item = currentItem, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
                             vm.recordSale(currentItem, qty, custName, custPhone)
                             itemToSell = null 
@@ -773,7 +772,7 @@ private fun TimelineGroup(
     selectionMode: Boolean,
     selectedLogs: MutableList<com.local.fatateer.data.SaleLog>,
     onLogClick: (com.local.fatateer.data.SaleLog) -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: (com.local.fatateer.data.SaleLog) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
@@ -792,7 +791,7 @@ private fun TimelineGroup(
                         Text("${log.itemName} (${log.quantity})", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         Text("${log.price} ج.م", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         if (!selectionMode) {
-                            IconButton(onClick = { onDeleteClick() }, modifier = Modifier.size(24.dp)) {
+                            IconButton(onClick = { onDeleteClick(log) }, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                             }
                         }
