@@ -207,16 +207,19 @@ fun FatateerApp(
                 }
             ) { padding ->
                 Box(modifier = Modifier.padding(padding)) {
-                    if (showLog) {
-                        SaleLogPage(
-                            logs = logs,
-                            onBack = { showLog = false },
-                            onDeleteLog = { vm.deleteSaleLog(it) },
-                            onClearAll = { vm.clearLogs() }
-                        )
-                    } else if (showSettings) {
-                        SettingsScreen(modifier = Modifier.fillMaxSize().padding(16.dp))
-                    } else if (showLowStock) {
+    if (showLog) {
+        SaleLogPage(
+            logs = logs,
+            onBack = { showLog = false },
+            onDeleteLog = { vm.deleteSaleLog(it) },
+            onClearAll = { vm.clearLogs() }
+        )
+    } else if (showSettings) {
+        SettingsScreen(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            onOpenLog = { showLog = true }
+        )
+    } else if (showLowStock) {
                         LowStockScreen(items = state.neededItems, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp))
                     } else {
                         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
@@ -231,9 +234,9 @@ fun FatateerApp(
                             }
                         }
                     }
-                    if (currentItemToSell != null) {
-                        SaleDialog(item = currentItemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
-                            vm.recordSale(currentItemToSell, qty, custName, custPhone)
+                    if (itemToSell != null) {
+                        SaleDialog(item = itemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
+                            vm.recordSale(itemToSell, qty, custName, custPhone)
                             itemToSell = null 
                         })
                     }
@@ -251,16 +254,16 @@ private fun SettingsScreen(modifier: Modifier = Modifier, onOpenLog: () -> Unit)
         Text(s.themeTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(8.dp)) {
-                ThemeModeRow(label = s.themeSystem, icon = Icons.Default.BrightnessAuto, selected = settings.themeMode == ThemeMode.SYSTEM, onClick = { settings.updateThemeMode(ThemeMode.SYSTEM) })
-                ThemeModeRow(label = s.themeDark, icon = Icons.Default.DarkMode, selected = settings.themeMode == ThemeMode.DARK, onClick = { settings.updateThemeMode(ThemeMode.DARK) })
-                ThemeModeRow(label = s.themeLight, icon = Icons.Default.LightMode, selected = settings.themeMode == ThemeMode.LIGHT, onClick = { settings.updateThemeMode(ThemeMode.LIGHT) })
+                ThemeModeRow(label = s.themeSystem, icon = Icons.Default.BrightnessAuto, selected = settings.themeMode == ThemeMode.SYSTEM, onClick = { settings.setThemeMode(ThemeMode.SYSTEM) })
+                ThemeModeRow(label = s.themeDark, icon = Icons.Default.DarkMode, selected = settings.themeMode == ThemeMode.DARK, onClick = { settings.setThemeMode(ThemeMode.DARK) })
+                ThemeModeRow(label = s.themeLight, icon = Icons.Default.LightMode, selected = settings.themeMode == ThemeMode.LIGHT, onClick = { settings.setThemeMode(ThemeMode.LIGHT) })
             }
         }
         Text(s.languageTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(8.dp)) {
-                ThemeModeRow(label = s.languageArabic, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ARABIC, onClick = { settings.updateLanguage(AppLanguage.ARABIC) })
-                ThemeModeRow(label = s.languageEnglish, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ENGLISH, onClick = { settings.updateLanguage(AppLanguage.ENGLISH) })
+                ThemeModeRow(label = s.languageArabic, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ARABIC, onClick = { settings.setLanguage(AppLanguage.ARABIC) })
+                ThemeModeRow(label = s.languageEnglish, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ENGLISH, onClick = { settings.setLanguage(AppLanguage.ENGLISH) })
             }
         }
     }
@@ -468,6 +471,7 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
     var expandedSub by remember { mutableStateOf(false) }
     var expandedBrand by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -491,7 +495,9 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
         },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (imagePath.isNotEmpty()) {
+                if (imagePath.isNullOrBlank()) {
+                    // handle empty case if needed
+                } else {
                     Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(8.dp))) {
                         AsyncImage(model = File(imagePath), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         IconButton(onClick = { imagePath = "" }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = 0.5f), CircleShape)) {
@@ -735,15 +741,15 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
                                 total = total, 
                                 selectionMode = selectionMode,
                                 selectedLogs = selectedLogs,
-                                onLogClick = { 
+                                onLogClick = { log -> 
                                     if (selectionMode) {
-                                        if (selectedLogs.contains(it)) selectedLogs.remove(it) else selectedLogs.add(it)
+                                        if (selectedLogs.contains(log)) selectedLogs.remove(log) else selectedLogs.add(log)
                                     } else {
-                                        showDetails = it 
+                                        showDetails = log 
                                     }
                                 },
                                 onDeleteClick = { 
-                                    if (!selectionMode) { selectionMode = true; selectedLogs.add(it) }
+                                    if (!selectionMode) { selectionMode = true; selectedLogs.add(log) }
                                 }
                             )
                         }
