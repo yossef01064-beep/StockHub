@@ -243,6 +243,36 @@ fun FatateerApp(
                             itemToSell = null 
                         })
                     }
+                    toDelete?.let { item ->
+                        AlertDialog(
+                            onDismissRequest = { toDelete = null },
+                            title = { Text("تأكيد الحذف") },
+                            text = { Text("هل أنت متأكد من حذف ${item.name}؟") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        vm.delete(item)
+                                        toDelete = null
+                                    }
+                                ) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { toDelete = null }) { Text("إلغاء") }
+                            }
+                        )
+                    }
+                    editor?.let { itemToEdit ->
+                        ItemEditorDialog(
+                            title = "${s.edit}: ${itemToEdit.name}",
+                            initial = itemToEdit,
+                            allowedCategories = if (chipCats.isNotEmpty()) chipCats else Categories.all,
+                            onDismiss = { editor = null },
+                            onSave = { updatedItem ->
+                                vm.save(updatedItem)
+                                editor = null
+                            }
+                        )
+                    }
                     if (showNew) {
                         ItemEditorDialog(
                             title = s.addItem,
@@ -424,7 +454,7 @@ private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (
         } else {
             LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
                 gridItems(items, key = { it.id }) { item ->
-                    ItemCard(item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSell = {}, onSelect = {})
+                    ItemCard(item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSelect = {})
                 }
             }
         }
@@ -848,7 +878,11 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
                                     }
                                 },
                                 onDeleteClick = { logItem -> 
-                                    if (!selectionMode) { selectionMode = true; selectedLogs.add(logItem) }
+                                    if (selectionMode) {
+                                        if (selectedLogs.contains(logItem)) selectedLogs.remove(logItem) else selectedLogs.add(logItem)
+                                    } else {
+                                        onDeleteLog(logItem)
+                                    }
                                 }
                             )
                         }
