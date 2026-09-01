@@ -50,12 +50,12 @@ class SettingsController(context: Context) {
     val strings: AppStrings
         get() = if (language == AppLanguage.ENGLISH) AppStrings.En else AppStrings.Ar
 
-    fun setLanguage(lang: AppLanguage) {
+    fun updateLanguage(lang: AppLanguage) {
         language = lang
         prefs.edit().putString("lang", lang.code).apply()
     }
 
-    fun setThemeMode(mode: ThemeMode) {
+    fun updateThemeMode(mode: ThemeMode) {
         themeMode = mode
         prefs.edit().putString("theme_mode", mode.prefsValue).apply()
     }

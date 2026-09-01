@@ -258,16 +258,16 @@ private fun SettingsScreen(modifier: Modifier = Modifier, onOpenLog: () -> Unit)
         Text(s.themeTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(8.dp)) {
-                ThemeModeRow(label = s.themeSystem, icon = Icons.Default.BrightnessAuto, selected = settings.themeMode == ThemeMode.SYSTEM, onClick = { settings.setThemeMode(ThemeMode.SYSTEM) })
-                ThemeModeRow(label = s.themeDark, icon = Icons.Default.DarkMode, selected = settings.themeMode == ThemeMode.DARK, onClick = { settings.setThemeMode(ThemeMode.DARK) })
-                ThemeModeRow(label = s.themeLight, icon = Icons.Default.LightMode, selected = settings.themeMode == ThemeMode.LIGHT, onClick = { settings.setThemeMode(ThemeMode.LIGHT) })
+                ThemeModeRow(label = s.themeSystem, icon = Icons.Default.BrightnessAuto, selected = settings.themeMode == ThemeMode.SYSTEM, onClick = { settings.updateThemeMode(ThemeMode.SYSTEM) })
+                ThemeModeRow(label = s.themeDark, icon = Icons.Default.DarkMode, selected = settings.themeMode == ThemeMode.DARK, onClick = { settings.updateThemeMode(ThemeMode.DARK) })
+                ThemeModeRow(label = s.themeLight, icon = Icons.Default.LightMode, selected = settings.themeMode == ThemeMode.LIGHT, onClick = { settings.updateThemeMode(ThemeMode.LIGHT) })
             }
         }
         Text(s.languageTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(8.dp)) {
-                ThemeModeRow(label = s.languageArabic, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ARABIC, onClick = { settings.setLanguage(AppLanguage.ARABIC) })
-                ThemeModeRow(label = s.languageEnglish, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ENGLISH, onClick = { settings.setLanguage(AppLanguage.ENGLISH) })
+                ThemeModeRow(label = s.languageArabic, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ARABIC, onClick = { settings.updateLanguage(AppLanguage.ARABIC) })
+                ThemeModeRow(label = s.languageEnglish, icon = Icons.Default.Language, selected = settings.language == AppLanguage.ENGLISH, onClick = { settings.updateLanguage(AppLanguage.ENGLISH) })
             }
         }
         Text("إدارة المبيعات", fontWeight = FontWeight.Bold, fontSize = 16.sp)
