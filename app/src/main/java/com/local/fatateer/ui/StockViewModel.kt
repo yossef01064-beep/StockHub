@@ -129,17 +129,16 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { logDao.delete(log) }
     }
 
-    fun recordSale(item: Item, qty: Int, customerName: String = "", customerPhone: String = "") {
+    fun recordSale(item: Item, qty: Int, price: Double, customerName: String = "", customerPhone: String = "") {
         viewModelScope.launch {
             if (item.quantity < qty) {
                 return@launch 
             }
 
-            val price = if (item.priceMax.isBlank()) item.priceMin else "${item.priceMin} - ${item.priceMax}"
             logDao.insert(SaleLog(
                 itemName = item.name,
                 category = item.category,
-                price = price,
+                price = price.toString(),
                 quantity = qty,
                 customerName = customerName,
                 customerPhone = customerPhone

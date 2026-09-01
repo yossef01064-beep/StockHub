@@ -238,8 +238,8 @@ fun FatateerApp(
                         }
                     }
                     itemToSell?.let { currentItem ->
-                        SaleDialog(item = currentItem, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
-                            vm.recordSale(currentItem, qty, custName, custPhone)
+                        SaleDialog(item = currentItem, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, pricePerUnit -> 
+                            vm.recordSale(currentItem, qty, pricePerUnit, custName, custPhone)
                             itemToSell = null 
                         })
                     }
@@ -429,10 +429,10 @@ private fun lowStockContainer(): Color = if (MaterialTheme.colorScheme.backgroun
 private fun lowStockContent(): Color = if (MaterialTheme.colorScheme.background.red < 0.2f) Color(0xFFFF8A80) else Color(0xFFC44536)
 
 @Composable
-private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit) {
+private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit, isSelected: Boolean = false) {
     val s = LocalAppStrings.current
     val low = item.quantity <= item.minQuantity
-    Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = if (low) lowStockContainer() else MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else if (low) lowStockContainer() else MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
@@ -661,9 +661,8 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
     var custName by remember { mutableStateOf("") }
     var custPhone by remember { mutableStateOf("") }
     
-    // Determine if price is fixed or range
     val isFixedPrice = item.priceMin == item.priceMax
-    val defaultPrice = if (isFixedPrice) item.priceMax.toDouble() else item.priceMax.toDouble()
+    val defaultPrice = if (isFixedPrice) item.priceMax.toDoubleOrNull() ?: 0.0 else item.priceMax.toDoubleOrNull() ?: 0.0
     var salePrice by remember { mutableStateOf(defaultPrice.toString()) }
     
     var error by remember { mutableStateOf<String?>(null) }
@@ -690,11 +689,11 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
         confirmButton = {
             TextButton(onClick = {
                 val q = qty.toIntOrNull() ?: 0
-                val p = salePrice.toDoubleOrNull() ?: if (isFixedPrice) item.priceMax.toDouble() else 0.0
+                val p = salePrice.toDoubleOrNull() ?: if (isFixedPrice) item.priceMax.toDoubleOrNull() ?: 0.0 else 0.0
                 if (q <= 0) { error = "الكمية يجب أن تكون أكبر من 0" }
                 else if (q > item.quantity) { error = "الكمية المطلوبة أكبر من المتوفر" }
                 else if (!isFixedPrice && p <= 0.0) { error = "السعر يجب أن يكون أكبر من 0" }
-                else { onConfirm(q, custName, custPhone, p * q) }
+                else { onConfirm(q, custName, custPhone, p) }
             }) { Text("تأكيد البيع") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(s.cancel) } }
@@ -711,7 +710,7 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
     var showDetails by remember { mutableStateOf<com.local.fatateer.data.SaleLog?>(null) }
     var selectionMode by remember { mutableStateOf(false) }
     val selectedLogs = remember { mutableStateListOf<com.local.fatateer.data.SaleLog>() }
-
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -723,19 +722,32 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
             Text(if (selectionMode) "حذف المبيعات" else s.salesLogTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             if (selectionMode) {
                 TextButton(
-                    onClick = { 
-                        selectedLogs.forEach { onDeleteLog(it) }
-                        selectedLogs.clear()
-                        selectionMode = false
-                    },
+                    onClick = { showDeleteConfirm = true },
                     enabled = selectedLogs.isNotEmpty(),
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("تم الحذف", fontWeight = FontWeight.Bold)
+                    Text("حذف المحدد", fontWeight = FontWeight.Bold)
                 }
             } else {
                 IconButton(onClick = onClearAll) { Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = MaterialTheme.colorScheme.error) }
             }
+        }
+
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text("تأكيد الحذف") },
+                text = { Text("هل تريد حذف ${selectedLogs.size} من سجلات المبيعات المحددة؟") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        selectedLogs.forEach { onDeleteLog(it) }
+                        selectedLogs.clear()
+                        selectionMode = false
+                        showDeleteConfirm = false
+                    }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(s.cancel) } }
+            )
         }
 
         if (!selectionMode) {
@@ -761,7 +773,10 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
 
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     grouped.forEach { (period, periodLogs) ->
-                        val total = periodLogs.sumOf { it.price.trim().split(" - ").firstOrNull()?.trim()?.toDoubleOrNull() ?: 0.0 }
+                        val total = periodLogs.sumOf { 
+                            val p = it.price.toDoubleOrNull() ?: 0.0
+                            p * it.quantity 
+                        }
                         item {
                             TimelineGroup(
                                 period = period, 
