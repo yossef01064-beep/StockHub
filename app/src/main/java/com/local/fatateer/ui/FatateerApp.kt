@@ -223,7 +223,7 @@ fun FatateerApp(
             onOpenLog = { showLog = true }
         )
     } else if (showLowStock) {
-                        LowStockScreen(items = state.neededItems, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp))
+                        LowStockScreen(items = state.neededItems, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, onSell = { itemToSell = it }, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp))
                     } else {
                         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                             when (MainTab.values()[page]) {
@@ -446,7 +446,7 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
 }
 
 @Composable
-private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, modifier: Modifier = Modifier) {
+private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, modifier: Modifier = Modifier) {
     val s = LocalAppStrings.current
     Column(modifier) {
         if (items.isEmpty()) {
@@ -454,7 +454,15 @@ private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (
         } else {
             LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
                 gridItems(items, key = { it.id }) { item ->
-                    ItemCard(item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSelect = {})
+                    ItemCard(
+                        item = item, 
+                        onPlus = { onPlus(item) }, 
+                        onMinus = { onMinus(item) }, 
+                        onEdit = { onEdit(item) }, 
+                        onDelete = { onDelete(item) }, 
+                        onSell = { onSell(item) },
+                        onSelect = {}
+                    )
                 }
             }
         }
