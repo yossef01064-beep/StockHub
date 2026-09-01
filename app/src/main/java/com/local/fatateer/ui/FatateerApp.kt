@@ -240,6 +240,18 @@ fun FatateerApp(
                             itemToSell = null 
                         })
                     }
+                    if (showNew) {
+                        ItemEditorDialog(
+                            title = s.addItem,
+                            initial = Item(id = 0L, name = "", category = defaultCategory, quantity = 0),
+                            allowedCategories = chipCats,
+                            onDismiss = { showNew = false },
+                            onSave = { newItem ->
+                                vm.save(newItem)
+                                showNew = false
+                            }
+                        )
+                    }
                 }
             }
         }
