@@ -214,8 +214,7 @@ fun FatateerApp(
         SaleLogPage(
             logs = logs,
             onBack = { showLog = false },
-            onDeleteLog = { vm.deleteSaleLog(it) },
-            onClearAll = { vm.clearLogs() }
+            onDeleteLog = { vm.deleteSaleLog(it) }
         )
     } else if (showSettings) {
         SettingsScreen(
@@ -755,62 +754,26 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
 enum class FilterMode { DAILY, MONTHLY }
 
 @Composable
-private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () -> Unit, onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit, onClearAll: () -> Unit) {
+private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () -> Unit, onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit) {
 
     val s = LocalAppStrings.current
     var filterMode by remember { mutableStateOf(FilterMode.DAILY) }
     var showDetails by remember { mutableStateOf<com.local.fatateer.data.SaleLog?>(null) }
-    var selectionMode by remember { mutableStateOf(false) }
-    val selectedLogs = remember { mutableStateListOf<com.local.fatateer.data.SaleLog>() }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            if (selectionMode) {
-                IconButton(onClick = { selectionMode = false; selectedLogs.clear() }) { Icon(Icons.Default.Close, contentDescription = "Cancel") }
-            } else {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
-            }
-            Text(if (selectionMode) "حذف المبيعات" else s.salesLogTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            if (selectionMode) {
-                TextButton(
-                    onClick = { showDeleteConfirm = true },
-                    enabled = selectedLogs.isNotEmpty(),
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("حذف المحدد", fontWeight = FontWeight.Bold)
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+            Text(s.salesLogTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(48.dp))
+        }
+
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
+            SingleChoiceSegmentedButtonRow {
+                SegmentedButton(selected = filterMode == FilterMode.DAILY, onClick = { filterMode = FilterMode.DAILY }, shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)) {
+                    Text("يومي")
                 }
-            } else {
-                IconButton(onClick = onClearAll) { Icon(Icons.Default.DeleteSweep, contentDescription = "Clear", tint = MaterialTheme.colorScheme.error) }
-            }
-        }
-
-        if (showDeleteConfirm) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirm = false },
-                title = { Text("تأكيد الحذف") },
-                text = { Text("هل تريد حذف ${selectedLogs.size} من سجلات المبيعات المحددة؟") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        selectedLogs.forEach { onDeleteLog(it) }
-                        selectedLogs.clear()
-                        selectionMode = false
-                        showDeleteConfirm = false
-                    }) { Text("حذف", color = MaterialTheme.colorScheme.error) }
-                },
-                dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(s.cancel) } }
-            )
-        }
-
-        if (!selectionMode) {
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
-                SingleChoiceSegmentedButtonRow {
-                    SegmentedButton(selected = filterMode == FilterMode.DAILY, onClick = { filterMode = FilterMode.DAILY }, shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)) {
-                        Text("يومي")
-                    }
-                    SegmentedButton(selected = filterMode == FilterMode.MONTHLY, onClick = { filterMode = FilterMode.MONTHLY }, shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)) {
-                        Text("شهري")
-                    }
+                SegmentedButton(selected = filterMode == FilterMode.MONTHLY, onClick = { filterMode = FilterMode.MONTHLY }, shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)) {
+                    Text("شهري")
                 }
             }
         }
@@ -834,22 +797,10 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
                                 period = period, 
                                 logs = periodLogs, 
                                 total = total, 
-                                selectionMode = selectionMode,
-                                selectedLogs = selectedLogs,
                                 onLogClick = { log -> 
-                                    if (selectionMode) {
-                                        if (selectedLogs.contains(log)) selectedLogs.remove(log) else selectedLogs.add(log)
-                                    } else {
-                                        showDetails = log 
-                                    }
+                                    showDetails = log 
                                 },
-                                onDeleteClick = { logItem -> 
-                                    if (selectionMode) {
-                                        if (selectedLogs.contains(logItem)) selectedLogs.remove(logItem) else selectedLogs.add(logItem)
-                                    } else {
-                                        onDeleteLog(logItem)
-                                    }
-                                }
+                                onDeleteLog = onDeleteLog
                             )
                         }
                     }
@@ -868,10 +819,8 @@ private fun TimelineGroup(
     period: String, 
     logs: List<com.local.fatateer.data.SaleLog>, 
     total: Double, 
-    selectionMode: Boolean,
-    selectedLogs: MutableList<com.local.fatateer.data.SaleLog>,
     onLogClick: (com.local.fatateer.data.SaleLog) -> Unit,
-    onDeleteClick: (com.local.fatateer.data.SaleLog) -> Unit
+    onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
@@ -884,15 +833,14 @@ private fun TimelineGroup(
                 Card(
                     onClick = { onLogClick(log) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (selectedLogs.contains(log)) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("${log.itemName} (${log.quantity})", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
                         Text("${log.price} ج.م", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        if (!selectionMode) {
-                            IconButton(onClick = { onDeleteClick(log) }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
-                            }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = { onDeleteLog(log) }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
