@@ -125,12 +125,13 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { dao.changeQuantity(item.id, -1) }
     }
 
+    fun deleteSaleLog(log: SaleLog) {
+        viewModelScope.launch { logDao.delete(log) }
+    }
+
     fun recordSale(item: Item, qty: Int, customerName: String = "", customerPhone: String = "") {
         viewModelScope.launch {
-            // التحقق من أن الكمية المطلوبة متوفرة في المخزن لمنع الأرقام السالبة
             if (item.quantity < qty) {
-                // هنا يمكن إضافة آلية لإظهار رسالة خطأ للمستخدم، 
-                // ولكن كمنطق برمجي سنقوم بخصم المتاح فقط أو منع العملية
                 return@launch 
             }
 

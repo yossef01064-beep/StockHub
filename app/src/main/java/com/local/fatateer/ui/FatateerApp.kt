@@ -14,7 +14,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -227,10 +231,9 @@ fun FatateerApp(
                             }
                         }
                     }
-                    val currentItemToSell = itemToSell
                     if (currentItemToSell != null) {
                         SaleDialog(item = currentItemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
-                            vm.recordSale(currentItemToSell, qty, custName, custPhone, totalPrice); 
+                            vm.recordSale(currentItemToSell, qty, custName, custPhone)
                             itemToSell = null 
                         })
                     }
@@ -465,11 +468,16 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
     var expandedSub by remember { mutableStateOf(false) }
     var expandedBrand by remember { mutableStateOf(false) }
 
-    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        uri?.let { imagePath = ImageStorage.saveImage(context, it) }
+        uri?.let { 
+            scope.launch {
+                imagePath = ImageStorage.copyToAppStorage(context, it) ?: ""
+            }
+        }
     }
+
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -659,13 +667,17 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
     )
 }
 
+enum class FilterMode { DAILY, MONTHLY }
+
 @Composable
 private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () -> Unit, onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit, onClearAll: () -> Unit) {
+
     val s = LocalAppStrings.current
     var filterMode by remember { mutableStateOf(FilterMode.DAILY) }
     var showDetails by remember { mutableStateOf<com.local.fatateer.data.SaleLog?>(null) }
     var selectionMode by remember { mutableStateOf(false) }
     val selectedLogs = remember { mutableStateListOf<com.local.fatateer.data.SaleLog>() }
+
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
