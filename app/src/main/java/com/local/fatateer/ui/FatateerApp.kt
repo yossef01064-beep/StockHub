@@ -235,8 +235,9 @@ fun FatateerApp(
                         }
                     }
                     if (itemToSell != null) {
-                        SaleDialog(item = itemToSell, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
-                            vm.recordSale(itemToSell, qty, custName, custPhone)
+                        val currentItem = itemToSell
+                        SaleDialog(item = currentItem, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, totalPrice -> 
+                            vm.recordSale(currentItem, qty, custName, custPhone)
                             itemToSell = null 
                         })
                     }
@@ -748,8 +749,8 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
                                         showDetails = log 
                                     }
                                 },
-                                onDeleteClick = { 
-                                    if (!selectionMode) { selectionMode = true; selectedLogs.add(log) }
+                                onDeleteClick = { logItem -> 
+                                    if (!selectionMode) { selectionMode = true; selectedLogs.add(logItem) }
                                 }
                             )
                         }
