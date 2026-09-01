@@ -142,6 +142,22 @@ sealed class AppStrings {
     abstract val addPhoto: String
     abstract val changePhoto: String
     abstract val removePhoto: String
+    abstract val nameRequired: String
+    abstract val qtyRequired: String
+    abstract val salesLogTitle: String
+    abstract val noSalesLogs: String
+    abstract val clearLogs: String
+    abstract val customerName: String
+    abstract val customerPhone: String
+    abstract val price: String
+    abstract val quantity: String
+    abstract val notes: String
+    abstract val brand: String
+    abstract val subCategory: String
+    abstract val category: String
+    abstract val minQuantity: String
+    abstract val priceMin: String
+    abstract val priceMax: String
 
     abstract fun categoryLabel(key: String): String
 
