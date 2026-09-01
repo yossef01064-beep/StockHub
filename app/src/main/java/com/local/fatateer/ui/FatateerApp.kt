@@ -383,7 +383,7 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                 LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
                     gridItems(state.filtered, key = { it.id }) { item ->
                         ItemCard(
-                            item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) },
+                            item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSell = { onSell(item) },
                             isSelected = selectionMode && selectedItems.contains(item),
                             onSelect = { 
                                 if (selectionMode) {
