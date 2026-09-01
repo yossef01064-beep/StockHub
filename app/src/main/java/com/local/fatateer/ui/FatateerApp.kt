@@ -424,7 +424,7 @@ private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (
         } else {
             LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
                 gridItems(items, key = { it.id }) { item ->
-                    ItemCard(item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSell = {})
+                    ItemCard(item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSell = { onSell(item) }, onSelect = { onSelect(item) })
                 }
             }
         }
