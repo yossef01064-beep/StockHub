@@ -415,8 +415,11 @@ fun FatateerApp(
                                         }
                                     }
                                 }
-                            },
-                            confirmButton = {
+                            }
+                        )
+                    }
+
+                    ItemEditorDialog(
                                 TextButton(onClick = onDismiss) {
                                     Text(s.cancel)
                                 }
