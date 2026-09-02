@@ -21,6 +21,16 @@ object ImageStorage {
             context.contentResolver.openInputStream(uri)?.use { input ->
                 outFile.outputStream().use { output -> input.copyTo(output) }
             } ?: return@withContext null
+            
+            // Delete the source file if it's a temporary camera file in cacheDir
+            if (uri.path?.contains("cache") == true) {
+                try {
+                    val tempFile = File(uri.path!!) 
+                    // Note: This is a simple check, FileProvider URIs are different.
+                    // Better to let the calling code handle the temporary file deletion.
+                } catch (_: Exception) {}
+            }
+            
             outFile.absolutePath
         } catch (e: Exception) {
             null

@@ -543,7 +543,14 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let { 
             scope.launch {
-                imagePath = ImageStorage.copyToAppStorage(context, it) ?: ""
+                val newPath = ImageStorage.copyToAppStorage(context, it)
+                if (newPath != null) {
+                    // Delete old image if replacing
+                    if (!imagePath.isNullOrBlank()) {
+                        ImageStorage.delete(imagePath)
+                    }
+                    imagePath = newPath
+                }
             }
         }
     }
@@ -553,7 +560,21 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
         val capturedUri = cameraImageUri
         if (success && capturedUri != null) {
             scope.launch {
-                imagePath = ImageStorage.copyToAppStorage(context, capturedUri) ?: imagePath
+                val newPath = ImageStorage.copyToAppStorage(context, capturedUri)
+                if (newPath != null) {
+                    // Delete old image if replacing
+                    if (!imagePath.isNullOrBlank()) {
+                        ImageStorage.delete(imagePath)
+                    }
+                    imagePath = newPath
+                }
+                
+                // Cleanup temporary file
+                try {
+                    capturedUri.path?.let { path ->
+                        File(path).delete()
+                    }
+                } catch (_: Exception) {}
             }
         }
     }
