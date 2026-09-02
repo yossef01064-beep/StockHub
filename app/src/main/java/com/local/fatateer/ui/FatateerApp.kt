@@ -184,7 +184,9 @@ fun FatateerApp(
                             }
                         },
                         actions = {
-                            // Removed the secondary categories menu as it was redundant
+                            IconButton(onClick = { showBackupDialog = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                            }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -214,7 +216,8 @@ fun FatateerApp(
         SaleLogPage(
             logs = logs,
             onBack = { showLog = false },
-            onDeleteLog = { vm.deleteSaleLog(it) }
+            onDeleteLog = { vm.deleteSaleLog(it) },
+            showBackupDialog = { showBackupDialog = it }
         )
     } else if (showSettings) {
         SettingsScreen(
@@ -471,7 +474,7 @@ private fun lowStockContainer(): Color = if (MaterialTheme.colorScheme.backgroun
 private fun lowStockContent(): Color = if (MaterialTheme.colorScheme.background.red < 0.2f) Color(0xFFFF8A80) else Color(0xFFC44536)
 
 @Composable
-private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit, isSelected: Boolean = false, onSelect: () -> Unit) {
+private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit, isSelected: Boolean = false, showSellButton: Boolean = false, onSelect: () -> Unit = {}) {
     val s = LocalAppStrings.current
     val low = item.quantity <= item.minQuantity
     Card(
@@ -482,35 +485,98 @@ private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(12.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    ItemThumbnail(item, modifier = Modifier.size(40.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(item.name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, modifier = Modifier.weight(1f))
+            // Row 1: Name, Edit, Delete
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = s.delete, modifier = Modifier.size(16.dp))
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Edit, contentDescription = s.edit, modifier = Modifier.size(16.dp)) }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Delete, contentDescription = s.delete, modifier = Modifier.size(16.dp)) }
-                    if (isSelected) {
-                        Checkbox(checked = true, onCheckedChange = { onSelect() })
+                Text(
+                    item.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center
+                )
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = s.edit, modifier = Modifier.size(16.dp))
+                }
+            }
+            // Row 2: Image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .padding(4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                ItemThumbnail(item, modifier = Modifier.fillMaxSize())
+            }
+
+            // Row 3: Price
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val priceMinValue = item.priceMin.toDoubleOrNull()
+                val priceMaxValue = item.priceMax.toDoubleOrNull()
+                
+                if (priceMinValue != null && priceMaxValue != null) {
+                    if (priceMinValue == priceMaxValue) {
+                        Text("${priceMinValue.toInt()} جنيه", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    } else {
+                        Text("${priceMinValue.toInt()} - ${priceMaxValue.toInt()} جنيه", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+                } else if (priceMinValue != null) {
+                    Text("${priceMinValue.toInt()} جنيه", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                } else if (priceMaxValue != null) {
+                    Text("${priceMaxValue.toInt()} جنيه", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+            // Row 4: Quantity and Buttons
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = onMinus,
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = s.minus, modifier = Modifier.size(18.dp))
+                }
+                Text("${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                IconButton(
+                    onClick = onPlus,
+                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White),
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = s.plus, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                if (showSellButton) {
+                    IconButton(
+                        onClick = onSell,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = Color.White),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.ShoppingCart, contentDescription = s.sell, modifier = Modifier.size(18.dp))
                     }
                 }
-            }
-            if (item.brand.isNotBlank() || item.subCategory.isNotBlank()) {
-                val sub = listOfNotNull(item.subCategory.takeIf { it.isNotBlank() }?.let { displayLabel(it, s) }, item.brand.takeIf { it.isNotBlank() }?.let { displayLabel(it, s) }).joinToString(" · ")
-                Text(sub, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
-            }
-            Spacer(Modifier.height(6.dp))
-            Text("${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
-            if (low) {
-                Text(if (item.quantity <= 0) s.outOfStock else s.almostOut, fontSize = 11.sp, color = lowStockContent(), fontWeight = FontWeight.SemiBold)
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onMinus, colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)), modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Remove, contentDescription = s.minus, modifier = Modifier.size(18.dp)) }
-                IconButton(onClick = onPlus, colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White), modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Add, contentDescription = s.plus, modifier = Modifier.size(18.dp)) }
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onSell, colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = Color.White), modifier = Modifier.size(36.dp)) { Icon(Icons.Default.ShoppingCart, contentDescription = "بيع", modifier = Modifier.size(18.dp)) }
             }
         }
     }
@@ -596,7 +662,13 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
                     // handle empty case if needed
                 } else {
                     Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(8.dp))) {
-                        AsyncImage(model = File(imagePath), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        if (imagePath.isNullOrBlank() || !File(imagePath).exists()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
+                            }
+                        } else {
+                            AsyncImage(model = File(imagePath), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                        }
                         IconButton(onClick = { imagePath = "" }, modifier = Modifier.align(Alignment.TopEnd).background(Color.Black.copy(alpha = 0.5f), CircleShape)) {
                             Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(18.dp))
                         }
@@ -678,8 +750,8 @@ private fun ItemEditorDialog(title: String, initial: Item, allowedCategories: Li
                     OutlinedTextField(value = minQty, onValueChange = { if (it.all { c -> c.isDigit() }) minQty = it }, label = { Text(s.minQuantity) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = priceMin, onValueChange = { priceMin = it }, label = { Text(s.priceMin) }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(value = priceMax, onValueChange = { priceMax = it }, label = { Text(s.priceMax) }, modifier = Modifier.weight(1f), singleLine = true)
+                    OutlinedTextField(value = priceMin, onValueChange = { priceMin = it.filter { it.isDigit() || it == '.' } }, label = { Text(s.priceMin) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                    OutlinedTextField(value = priceMax, onValueChange = { priceMax = it.filter { it.isDigit() || it == '.' } }, label = { Text(s.priceMax) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
                 }
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(s.notes) }, modifier = Modifier.fillMaxWidth())
                 if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
@@ -733,7 +805,7 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
     var custName by remember { mutableStateOf("") }
     var custPhone by remember { mutableStateOf("") }
     
-    val isFixedPrice = item.priceMin == item.priceMax
+    val isFixedPrice = item.priceMin.isNotBlank() && item.priceMax.isNotBlank() && item.priceMin == item.priceMax && item.priceMin.toDoubleOrNull() != null && item.priceMax.toDoubleOrNull() != null && item.priceMin.toDoubleOrNull()!! > 0.0
     val defaultPrice = if (isFixedPrice) item.priceMax.toDoubleOrNull() ?: 0.0 else item.priceMax.toDoubleOrNull() ?: 0.0
     var salePrice by remember { mutableStateOf(defaultPrice.toString()) }
     
@@ -748,7 +820,7 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
                 OutlinedTextField(value = qty, onValueChange = { if (it.all { c -> c.isDigit() }) qty = it }, label = { Text("الكمية المباعة") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
                 
                 if (!isFixedPrice) {
-                    OutlinedTextField(value = salePrice, onValueChange = { salePrice = it }, label = { Text("سعر البيع (للقطعة)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                    OutlinedTextField(value = salePrice, onValueChange = { salePrice = it.filter { it.isDigit() || it == '.' } }, label = { Text("سعر البيع (للقطعة)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
                 } else {
                     Text("السعر الثابت: ${item.priceMax} ج.م", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
@@ -762,9 +834,10 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
             TextButton(onClick = {
                 val q = qty.toIntOrNull() ?: 0
                 val p = salePrice.toDoubleOrNull() ?: if (isFixedPrice) item.priceMax.toDoubleOrNull() ?: 0.0 else 0.0
-                if (q <= 0) { error = "الكمية يجب أن تكون أكبر من 0" }
-                else if (q > item.quantity) { error = "الكمية المطلوبة أكبر من المتوفر" }
-                else if (!isFixedPrice && p <= 0.0) { error = "السعر يجب أن يكون أكبر من 0" }
+                if (p <= 0.0) { error = s.priceMustBePositive } else if (p > 100000.0) { error = s.priceTooHigh }
+                if (q <= 0) { error = s.qtyMustBePositive }
+                else if (q > item.quantity) { error = s.qtyExceedsStock }
+                else if (!isFixedPrice && p <= 0.0) { error = s.priceMustBePositive }
                 else { onConfirm(q, custName, custPhone, p) }
             }) { Text("تأكيد البيع") }
         },
@@ -775,15 +848,397 @@ fun SaleDialog(item: Item, onDismiss: () -> Unit, onConfirm: (Int, String, Strin
 enum class FilterMode { DAILY, MONTHLY }
 
 @Composable
+private fun ExpandableDayGroup(
+    period: String,
+    logs: List<SaleLog>,
+    total: Double,
+    isExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
+    onLogClick: (SaleLog) -> Unit,
+    onDeleteLog: (SaleLog) -> Unit,
+    onShareDay: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()) }
+    val formattedDate = try {
+        dateFormat.format(Date(period.toLong()))
+    } catch (e: Exception) {
+        period
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandChange(!isExpanded) }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isExpanded) s.collapse else s.expand
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    formattedDate,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("${logs.size} ${s.operations} • ${total.toInt()} جنيه", color = MaterialTheme.colorScheme.secondary)
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(onClick = onShareDay) {
+                            Icon(Icons.Default.Share, contentDescription = s.share)
+                        }
+                    }
+
+                    logs.forEach { log ->
+                        SaleLogRow(
+                            log = log,
+                            onClick = { onLogClick(log) },
+                            onDelete = { onDeleteLog(log) }
+                        )
+                        Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SaleLogRow(
+    log: SaleLog,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(log.itemName, fontWeight = FontWeight.Medium)
+            Text("${log.quantity} × ${log.price} جنيه", color = MaterialTheme.colorScheme.secondary)
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = s.delete, tint = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+private fun shareDayLogs(period: String, logs: List<SaleLog>) {
+    val s = LocalAppStrings.current
+    val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+    val formattedDate = try {
+        dateFormat.format(Date(period.toLong()))
+    } catch (e: Exception) {
+        period
+    }
+
+    val shareText = buildString {
+        append("${s.salesLogTitle}\n")
+        append("${s.date}: $formattedDate\n\n")
+
+        logs.forEach { log ->
+            append("${s.item}: ${log.itemName}\n")
+            append("${s.quantity}: ${log.quantity}\n")
+            append("${s.price}: ${log.price} جنيه\n")
+            if (log.customerName.isNotBlank()) {
+                append("${s.customer}: ${log.customerName}\n")
+            }
+            if (log.customerPhone.isNotBlank()) {
+                append("${s.phone}: ${log.customerPhone}\n")
+            }
+            append("\n---\n")
+        }
+
+        append("${s.totalDay}: ${logs.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity }.toInt()} جنيه")
+    }
+
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, shareText)
+    }
+    LocalContext.current.startActivity(Intent.createChooser(intent, s.shareVia))
+}
+
+@Composable
+private fun BackupRestoreDialog(
+    onDismiss: () -> Unit,
+    onExport: () -> Unit,
+    onRestore: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s.backupRestore) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(
+                    onClick = onExport,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(s.export)
+                    }
+                }
+                Button(
+                    onClick = onRestore,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Icon(Icons.Default.Restore, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(s.restore)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(s.cancel)
+            }
+        }
+    )
+}
+
+@Composable
+private fun ExpandableDayGroup(
+    period: String,
+    logs: List<SaleLog>,
+    total: Double,
+    isExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
+    onLogClick: (SaleLog) -> Unit,
+    onDeleteLog: (SaleLog) -> Unit,
+    onShareDay: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()) }
+    val formattedDate = try {
+        dateFormat.format(Date(period.toLong()))
+    } catch (e: Exception) {
+        period
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandChange(!isExpanded) }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isExpanded) s.collapse else s.expand
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    formattedDate,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("${logs.size} ${s.operations} • ${total.toInt()} جنيه", color = MaterialTheme.colorScheme.secondary)
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(onClick = onShareDay) {
+                            Icon(Icons.Default.Share, contentDescription = s.share)
+                        }
+                    }
+
+                    logs.forEach { log ->
+                        SaleLogRow(
+                            log = log,
+                            onClick = { onLogClick(log) },
+                            onDelete = { onDeleteLog(log) }
+                        )
+                        Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SaleLogRow(
+    log: SaleLog,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(log.itemName, fontWeight = FontWeight.Medium)
+            Text("${log.quantity} × ${log.price} جنيه", color = MaterialTheme.colorScheme.secondary)
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = s.delete, tint = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+private fun shareDayLogs(period: String, logs: List<SaleLog>) {
+    val s = LocalAppStrings.current
+    val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
+    val formattedDate = try {
+        dateFormat.format(Date(period.toLong()))
+    } catch (e: Exception) {
+        period
+    }
+
+    val shareText = buildString {
+        append("${s.salesLogTitle}\n")
+        append("${s.date}: $formattedDate\n\n")
+
+        logs.forEach { log ->
+            append("${s.item}: ${log.itemName}\n")
+            append("${s.quantity}: ${log.quantity}\n")
+            append("${s.price}: ${log.price} جنيه\n")
+            if (log.customerName.isNotBlank()) {
+                append("${s.customer}: ${log.customerName}\n")
+            }
+            if (log.customerPhone.isNotBlank()) {
+                append("${s.phone}: ${log.customerPhone}\n")
+            }
+            append("\n---\n")
+        }
+
+        append("${s.totalDay}: ${logs.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity }.toInt()} جنيه")
+    }
+
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, shareText)
+    }
+    LocalContext.current.startActivity(Intent.createChooser(intent, s.shareVia))
+}
+
+@Composable
+private fun BackupRestoreDialog(
+    onDismiss: () -> Unit,
+    onExport: () -> Unit,
+    onRestore: () -> Unit
+) {
+    val s = LocalAppStrings.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s.backupRestore) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(
+                    onClick = onExport,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(s.export)
+                    }
+                }
+                Button(
+                    onClick = onRestore,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Icon(Icons.Default.Restore, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(s.restore)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(s.cancel)
+            }
+        }
+    )
+}
+
+@Composable
 private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () -> Unit, onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit) {
 
     val s = LocalAppStrings.current
     var filterMode by remember { mutableStateOf(FilterMode.DAILY) }
     var showDetails by remember { mutableStateOf<com.local.fatateer.data.SaleLog?>(null) }
+    var expandedDays by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var showBackupDialog by remember { mutableStateOf(false) }
+    BackHandler(enabled = showDetails != null) { showDetails = null }
+    
+    // Prevent multiple dialogs from being open at once
+    LaunchedEffect(showDetails) {
+        if (showDetails == null) {
+            // Ensure no lingering dialogs when closed
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = s.back) }
             Text(s.salesLogTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(48.dp))
         }
@@ -791,10 +1246,10 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
             SingleChoiceSegmentedButtonRow {
                 SegmentedButton(selected = filterMode == FilterMode.DAILY, onClick = { filterMode = FilterMode.DAILY }, shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)) {
-                    Text("يومي")
+                    Text(s.daily)
                 }
                 SegmentedButton(selected = filterMode == FilterMode.MONTHLY, onClick = { filterMode = FilterMode.MONTHLY }, shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)) {
-                    Text("شهري")
+                    Text(s.monthly)
                 }
             }
         }
@@ -814,14 +1269,17 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
                             p * it.quantity 
                         }
                         item {
-                            TimelineGroup(
-                                period = period, 
-                                logs = periodLogs, 
-                                total = total, 
-                                onLogClick = { log -> 
-                                    showDetails = log 
+                            ExpandableDayGroup(
+                                period = period,
+                                logs = periodLogs,
+                                total = total,
+                                isExpanded = expandedDays[period] ?: false,
+                                onExpandChange = { expanded ->
+                                    expandedDays = expandedDays.toMutableMap().apply { put(period, expanded) }
                                 },
-                                onDeleteLog = onDeleteLog
+                                onLogClick = { log -> showDetails = log },
+                                onDeleteLog = onDeleteLog,
+                                onShareDay = { shareDayLogs(period, periodLogs) }
                             )
                         }
                     }
@@ -832,6 +1290,361 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
 
     showDetails?.let { log ->
         SaleDetailDialog(log = log, onDismiss = { showDetails = null })
+    }
+
+    if (showBackupDialog) {
+        BackupRestoreDialog(
+            onDismiss = { showBackupDialog = false },
+            onExport = { exportBackup() },
+            onRestore = { restoreBackup() }
+        )
+    }
+
+    @Composable
+    private fun BackupRestoreDialog(
+        onDismiss: () -> Unit,
+        onExport: () -> Unit,
+        onRestore: () -> Unit
+    ) {
+        val s = LocalAppStrings.current
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(s.backupRestoreTitle) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Button(
+                        onClick = onExport,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(s.exportBackup)
+                        }
+                    }
+                    Button(
+                        onClick = onRestore,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(s.restoreBackup)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(s.cancel)
+                }
+            }
+        )
+    }
+
+    private suspend fun createBackupFile(context: Context): File? {
+        val database = (context.applicationContext as FatateerApp).database
+        val imageStorageDir = File(context.filesDir, "item_images")
+        val backupDir = context.cacheDir
+        val backupFileName = "StockHub_Backup_${System.currentTimeMillis()}.stockhub"
+        val backupFile = File(backupDir, backupFileName)
+
+        // Create a zip file containing database and images
+        ZipOutputStream(backupFile.outputStream()).use { zipOut ->
+            // Add database to zip
+            val dbFile = File(context.getDatabasePath("fatateer.db").path)
+            if (dbFile.exists()) {
+                addFileToZip(zipOut, dbFile, "database/fatateer.db")
+            }
+
+            // Add images to zip
+            if (imageStorageDir.exists() && imageStorageDir.isDirectory) {
+                imageStorageDir.listFiles()?.forEach { file ->
+                    addFileToZip(zipOut, file, "images/${file.name}")
+                }
+            }
+        }
+        return backupFile
+    }
+
+    private fun shareBackupFile(context: Context, file: File) {
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "مشاركة النسخة الاحتياطية"))
+    }
+
+    private suspend fun pickBackupFile(context: Context): File? {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            type = "application/zip"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        val resultLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.data?.let { uri ->
+                    val file = copyBackupFileToCache(context, uri)
+                    if (file != null) {
+                        restoreFromBackup(context, file)
+                    }
+                }
+            }
+        }
+        resultLauncher.launch(intent)
+        return null // Handled via launcher
+    }
+
+    private suspend fun copyBackupFileToCache(context: Context, uri: Uri): File? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
+                val backupFile = File(context.cacheDir, "restore_backup_${System.currentTimeMillis()}.zip")
+                backupFile.outputStream().use { output ->
+                    inputStream.copyTo(output)
+                }
+                backupFile
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    private suspend fun restoreFromBackup(context: Context, backupFile: File) {
+        val database = (context.applicationContext as FatateerApp).database
+        val imageStorageDir = File(context.filesDir, "item_images")
+
+        // Clear existing data
+        database.clearAllTables()
+        if (imageStorageDir.exists()) {
+            imageStorageDir.deleteRecursively()
+        }
+
+        // Extract backup
+        ZipInputStream(backupFile.inputStream()).use { zipIn ->
+            var zipEntry: ZipEntry?
+            while (zipIn.nextEntry.also { zipEntry = it } != null) {
+                val filePath = zipEntry!!.name
+                val file = if (filePath.startsWith("database/")) {
+                    File(context.getDatabasePath("fatateer.db").path)
+                } else if (filePath.startsWith("images/")) {
+                    File(imageStorageDir, filePath.substringAfter("images/"))
+                } else {
+                    continue
+                }
+
+                if (zipEntry!!.isDirectory) {
+                    file.mkdirs()
+                } else {
+                    file.parentFile?.mkdirs()
+                    file.outputStream().use { output ->
+                        zipIn.copyTo(output)
+                    }
+                }
+            }
+        }
+
+        // Update image paths in database
+        val items = database.itemDao().getAll()
+        items.forEach { item ->
+            if (item.imagePath != null) {
+                val oldPath = File(item.imagePath)
+                val newPath = File(imageStorageDir, oldPath.name)
+                if (newPath.exists()) {
+                    database.itemDao().updateImagePath(item.id, newPath.absolutePath)
+                }
+            }
+        }
+
+        Toast.makeText(context, "تم استعادة البيانات بنجاح", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun addFileToZip(zipOut: ZipOutputStream, file: File, zipEntryName: String) {
+        ZipEntry(zipEntryName).also { zipOut.putNextEntry(it) }
+        file.inputStream().use { input ->
+            input.copyTo(zipOut)
+        }
+        zipOut.closeEntry()
+    }
+
+    @Composable
+    private fun SaleDetailDialog(log: SaleLog, onDismiss: () -> Unit) {
+        val s = LocalAppStrings.current
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("تفاصيل عملية البيع") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DetailRow(label = s.item, value = log.itemName)
+                    DetailRow(label = s.quantity, value = log.quantity.toString())
+                    DetailRow(label = s.price, value = "${log.price} جنيه")
+                    if (log.customerName.isNotBlank()) DetailRow(label = s.customerName, value = log.customerName)
+                    if (log.customerPhone.isNotBlank()) DetailRow(label = s.customerPhone, value = log.customerPhone)
+                    DetailRow(label = s.date, value = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(log.timestamp)))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(s.close)
+                }
+            }
+        )
+    }
+
+    @Composable
+    private fun ExpandableDayGroup(
+        period: String,
+        logs: List<SaleLog>,
+        total: Double,
+        isExpanded: Boolean,
+        onExpandChange: (Boolean) -> Unit,
+        onLogClick: (SaleLog) -> Unit,
+        onDeleteLog: (SaleLog) -> Unit
+    ) {
+        val s = LocalAppStrings.current
+        val expanded = remember { mutableStateOf(isExpanded) }
+        Column(
+            modifier = Modifier.animateContentSize()
+        ) {
+            val icon = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore
+            val arrowIcon = if (expanded.value) Icons.AutoMirrored.Default.KeyboardArrowUp else Icons.AutoMirrored.Default.KeyboardArrowDown
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded.value = !expanded.value; onExpandChange(!expanded.value) }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(period, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("${logs.size} ${s.operations} • ${total.toInt()} جنيه", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                }
+                Icon(arrowIcon, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
+
+            AnimatedVisibility(
+                visible = expanded.value,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${total.toInt()} جنيه", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        IconButton(
+                            onClick = { shareDaySales(period, logs) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = s.share)
+                        }
+                    }
+
+                    logs.forEach { log ->
+                        SaleLogItem(
+                            log = log,
+                            onClick = { onLogClick(log) },
+                            onDelete = { onDeleteLog(log) }
+                        )
+                        Divider(modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SaleLogItem(
+        log: SaleLog,
+        onClick: () -> Unit,
+        onDelete: () -> Unit
+    ) {
+        val s = LocalAppStrings.current
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(log.itemName, fontWeight = FontWeight.Medium)
+                Text("${log.quantity} × ${log.price} جنيه", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            }
+            if (log.customerName.isNotBlank() || log.customerPhone.isNotBlank()) {
+                Column(
+                    modifier = Modifier.padding(end = 16.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    if (log.customerName.isNotBlank()) Text(log.customerName, fontSize = 12.sp)
+                    if (log.customerPhone.isNotBlank()) Text(log.customerPhone, fontSize = 12.sp)
+                }
+            }
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = s.delete, tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+
+    private fun shareDaySales(period: String, logs: List<SaleLog>) {
+        val s = LocalAppStrings.current
+        val dateFormat = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US) }
+        val date = try {
+            dateFormat.parse(period)
+        } catch (e: Exception) {
+            java.util.Date(System.currentTimeMillis())
+        }
+        val formattedDate = java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault()).format(date)
+
+        val shareText = buildString {
+            append("${s.salesLogTitle}\n")
+            append("${s.date}: $formattedDate\n\n")
+            append("-\n")
+            logs.forEach { log ->
+                append("المنتج: ${log.itemName}\n")
+                append("الكمية: ${log.quantity}\n")
+                append("السعر: ${log.price} جنيه\n")
+                if (log.customerName.isNotBlank()) append("العميل: ${log.customerName}\n")
+                if (log.customerPhone.isNotBlank()) append("الهاتف: ${log.customerPhone}\n")
+                append("-\n")
+            }
+            append("إجمالي اليوم: ${logs.sumOf { it.price.toDoubleOrNull() ?: 0.0 * it.quantity }.toInt()} جنيه")
+        }
+
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, shareText)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, s.shareVia))
     }
 }
 

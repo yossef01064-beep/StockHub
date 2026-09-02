@@ -2,6 +2,7 @@ package com.local.fatateer.data
 
 object Categories {
     val spareParts = listOf(
+        "أدوات",
         "IC الصوت",
         "IC TV",
         "المكثفات",
