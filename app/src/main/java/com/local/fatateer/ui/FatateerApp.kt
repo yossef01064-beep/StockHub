@@ -287,7 +287,16 @@ fun FatateerApp(
                     }
                     if (showNew) {
                         ItemEditorDialog(
-                        }
+                            title = s.addItem,
+                            initial = Item(id = 0L, name = "", category = defaultCategory, quantity = 0),
+                            allowedCategories = chipCats,
+                            onDismiss = { showNew = false },
+                            onSave = { newItem ->
+                                vm.save(newItem)
+                                showNew = false
+                            }
+                        )
+                    }
                     }
 
                     @Composable
@@ -353,19 +362,55 @@ fun FatateerApp(
                                     ) {
                                         items(accentColors) { color ->
                                             val isSelected = settings.accentColor == color
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(56.dp)
-                                                    .clip(CircleShape)
-                                                    .background(color.color)
-                                                    .border(2.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
-                                                    .clickable { settings.setAccentColor(color) }
-                                                    .padding(8.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                if (isSelected) {
-                                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                            val s = LocalAppStrings.current
+                                            val colorName = when (settings.language) {
+                                                AppLanguage.ARABIC -> when (color) {
+                                                    AccentColor.BLUE -> s.ar_blue
+                                                    AccentColor.GREEN -> s.ar_green
+                                                    AccentColor.PURPLE -> s.ar_purple
+                                                    AccentColor.RED -> s.ar_red
+                                                    AccentColor.ORANGE -> s.ar_orange
+                                                    AccentColor.YELLOW -> s.ar_yellow
+                                                    AccentColor.PINK -> s.ar_pink
+                                                    AccentColor.TEAL -> s.ar_teal
+                                                    AccentColor.DEEP_PURPLE -> s.ar_deep_purple
+                                                    AccentColor.BROWN -> s.ar_brown
+                                                    else -> ""
                                                 }
+                                                else -> when (color) {
+                                                    AccentColor.BLUE -> "Blue"
+                                                    AccentColor.GREEN -> "Green"
+                                                    AccentColor.PURPLE -> "Purple"
+                                                    AccentColor.RED -> "Red"
+                                                    AccentColor.ORANGE -> "Orange"
+                                                    AccentColor.YELLOW -> "Yellow"
+                                                    AccentColor.PINK -> "Pink"
+                                                    AccentColor.TEAL -> "Teal"
+                                                    AccentColor.DEEP_PURPLE -> "Deep Purple"
+                                                    AccentColor.BROWN -> "Brown"
+                                                    else -> ""
+                                                }
+                                            }
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                            .size(56.dp)
+                                                            .clip(CircleShape)
+                                                            .background(color.color)
+                                                            .border(2.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
+                                                            .clickable { settings.setAccentColor(color) }
+                                                            .padding(8.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    if (isSelected) {
+                                                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                                    }
+                                                }
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(colorName, fontSize = 12.sp, maxLines = 1)
                                             }
                                         }
                                     }

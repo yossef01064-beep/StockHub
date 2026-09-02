@@ -34,28 +34,28 @@ enum class ThemeMode(val prefsValue: String) {
 }
 
 enum class AccentColor(val color: Color, val nameRes: String) {
-    BLUE(Color(0xFF2196F3), "blue"),
-    GREEN(Color(0xFF4CAF50), "green"),
-    PURPLE(Color(0xFF9C27B0), "purple"),
-    RED(Color(0xFFFF4081), "red"),
-    ORANGE(Color(0xFFFF5722), "orange"),
-    YELLOW(Color(0xFFFFC107), "yellow"),
-    PINK(Color(0xFFE91E63), "pink"),
-    TEAL(Color(0xFF009688), "teal"),
-    DEEP_PURPLE(Color(0xFF673AB7), "deep_purple"),
-    BROWN(Color(0xFF795548), "brown");
+    BLUE(Color(0xFF2196F3), "ar_blue"),
+    GREEN(Color(0xFF4CAF50), "ar_green"),
+    PURPLE(Color(0xFF9C27B0), "ar_purple"),
+    RED(Color(0xFFFF4081), "ar_red"),
+    ORANGE(Color(0xFFFF5722), "ar_orange"),
+    YELLOW(Color(0xFFFFC107), "ar_yellow"),
+    PINK(Color(0xFFE91E63), "ar_pink"),
+    TEAL(Color(0xFF009688), "ar_teal"),
+    DEEP_PURPLE(Color(0xFF673AB7), "ar_deep_purple"),
+    BROWN(Color(0xFF795548), "ar_brown");
 
     companion object {
         fun fromPrefs(v: String?): AccentColor = when (v) {
-            "green" -> GREEN
-            "purple" -> PURPLE
-            "red" -> RED
-            "orange" -> ORANGE
-            "yellow" -> YELLOW
-            "pink" -> PINK
-            "teal" -> TEAL
-            "deep_purple" -> DEEP_PURPLE
-            "brown" -> BROWN
+            "ar_green" -> GREEN
+            "ar_purple" -> PURPLE
+            "ar_red" -> RED
+            "ar_orange" -> ORANGE
+            "ar_yellow" -> YELLOW
+            "ar_pink" -> PINK
+            "ar_teal" -> TEAL
+            "ar_deep_purple" -> DEEP_PURPLE
+            "ar_brown" -> BROWN
             else -> BLUE // Default
         }
     }
