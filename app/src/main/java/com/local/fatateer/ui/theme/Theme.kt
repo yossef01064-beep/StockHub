@@ -43,10 +43,22 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun FatateerTheme(
     darkTheme: Boolean,
+    accentColor: AccentColor = AccentColor.BLUE,
     content: @Composable () -> Unit
 ) {
+    val colorScheme = when {
+        darkTheme -> DarkColors
+        else -> LightColors
+    }.copy(
+        primary = accentColor.color,
+        secondary = accentColor.color.copy(alpha = 0.7f),
+        tertiary = accentColor.color.copy(alpha = 0.5f),
+        onPrimary = Color.White,
+        onSecondary = Color.White
+    )
+
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = colorScheme,
         content = content
     )
 }

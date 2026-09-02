@@ -66,6 +66,8 @@ fun FatateerApp(
     var showSettings by remember { mutableStateOf(false) }
     var showLowStock by remember { mutableStateOf(false) }
     var showLog by remember { mutableStateOf(false) }
+    var showBackupDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(pageCount = { 3 })
     val pagerScope = rememberCoroutineScope()
@@ -184,6 +186,9 @@ fun FatateerApp(
                             }
                         },
                         actions = {
+                            IconButton(onClick = { showThemeDialog = true }) {
+                                Icon(Icons.Default.Palette, contentDescription = "Theme")
+                            }
                             IconButton(onClick = { showBackupDialog = true }) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "Options")
                             }
@@ -239,6 +244,11 @@ fun FatateerApp(
                             }
                         }
                     }
+                    if (showThemeDialog) {
+                        ThemeDialog(
+                            onDismiss = { showThemeDialog = false }
+                        )
+                    }
                     itemToSell?.let { currentItem ->
                         SaleDialog(item = currentItem, onDismiss = { itemToSell = null }, onConfirm = { qty, custName, custPhone, pricePerUnit -> 
                             vm.recordSale(currentItem, qty, pricePerUnit, custName, custPhone)
@@ -277,6 +287,99 @@ fun FatateerApp(
                     }
                     if (showNew) {
                         ItemEditorDialog(
+                        }
+                    }
+
+                    @Composable
+                    private fun ThemeDialog(onDismiss: () -> Unit) {
+                        val settings = LocalSettingsController.current
+                        val s = LocalAppStrings.current
+                        val accentColors = listOf(
+                            AccentColor.BLUE,
+                            AccentColor.GREEN,
+                            AccentColor.PURPLE,
+                            AccentColor.RED,
+                            AccentColor.ORANGE,
+                            AccentColor.YELLOW,
+                            AccentColor.PINK,
+                            AccentColor.TEAL,
+                            AccentColor.DEEP_PURPLE,
+                            AccentColor.BROWN
+                        )
+
+                        AlertDialog(
+                            onDismissRequest = onDismiss,
+                            title = { Text(s.appColorTitle) },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    // Theme Mode Section
+                                    Text(s.themeTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    Card(
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(Modifier.padding(8.dp)) {
+                                            ThemeModeRow(
+                                                label = s.themeSystem,
+                                                icon = Icons.Default.BrightnessAuto,
+                                                selected = settings.themeMode == ThemeMode.SYSTEM,
+                                                onClick = { settings.setThemeMode(ThemeMode.SYSTEM) }
+                                            )
+                                            ThemeModeRow(
+                                                label = s.themeDark,
+                                                icon = Icons.Default.DarkMode,
+                                                selected = settings.themeMode == ThemeMode.DARK,
+                                                onClick = { settings.setThemeMode(ThemeMode.DARK) }
+                                            )
+                                            ThemeModeRow(
+                                                label = s.themeLight,
+                                                icon = Icons.Default.LightMode,
+                                                selected = settings.themeMode == ThemeMode.LIGHT,
+                                                onClick = { settings.setThemeMode(ThemeMode.LIGHT) }
+                                            )
+                                        }
+                                    }
+
+                                    // Accent Color Section
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(s.themeAppColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    LazyHorizontalGrid(
+                                        rows = GridCells.Fixed(2),
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        items(accentColors) { color ->
+                                            val isSelected = settings.accentColor == color
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(56.dp)
+                                                    .clip(CircleShape)
+                                                    .background(color.color)
+                                                    .border(2.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, CircleShape)
+                                                    .clickable { settings.setAccentColor(color) }
+                                                    .padding(8.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (isSelected) {
+                                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = onDismiss) {
+                                    Text(s.cancel)
+                                }
+                            }
+                        )
+                    }
+
+                    ItemEditorDialog(
                             title = s.addItem,
                             initial = Item(id = 0L, name = "", category = defaultCategory, quantity = 0),
                             allowedCategories = chipCats,
@@ -298,14 +401,6 @@ private fun SettingsScreen(modifier: Modifier = Modifier, onOpenLog: () -> Unit)
     val settings = LocalSettingsController.current
     val s = LocalAppStrings.current
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text(s.themeTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(8.dp)) {
-                ThemeModeRow(label = s.themeSystem, icon = Icons.Default.BrightnessAuto, selected = settings.themeMode == ThemeMode.SYSTEM, onClick = { settings.setThemeMode(ThemeMode.SYSTEM) })
-                ThemeModeRow(label = s.themeDark, icon = Icons.Default.DarkMode, selected = settings.themeMode == ThemeMode.DARK, onClick = { settings.setThemeMode(ThemeMode.DARK) })
-                ThemeModeRow(label = s.themeLight, icon = Icons.Default.LightMode, selected = settings.themeMode == ThemeMode.LIGHT, onClick = { settings.setThemeMode(ThemeMode.LIGHT) })
-            }
-        }
         Text(s.languageTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(8.dp)) {

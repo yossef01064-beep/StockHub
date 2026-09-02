@@ -33,6 +33,34 @@ enum class ThemeMode(val prefsValue: String) {
     }
 }
 
+enum class AccentColor(val color: Color, val nameRes: String) {
+    BLUE(Color(0xFF2196F3), "blue"),
+    GREEN(Color(0xFF4CAF50), "green"),
+    PURPLE(Color(0xFF9C27B0), "purple"),
+    RED(Color(0xFFFF4081), "red"),
+    ORANGE(Color(0xFFFF5722), "orange"),
+    YELLOW(Color(0xFFFFC107), "yellow"),
+    PINK(Color(0xFFE91E63), "pink"),
+    TEAL(Color(0xFF009688), "teal"),
+    DEEP_PURPLE(Color(0xFF673AB7), "deep_purple"),
+    BROWN(Color(0xFF795548), "brown");
+
+    companion object {
+        fun fromPrefs(v: String?): AccentColor = when (v) {
+            "green" -> GREEN
+            "purple" -> PURPLE
+            "red" -> RED
+            "orange" -> ORANGE
+            "yellow" -> YELLOW
+            "pink" -> PINK
+            "teal" -> TEAL
+            "deep_purple" -> DEEP_PURPLE
+            "brown" -> BROWN
+            else -> BLUE // Default
+        }
+    }
+}
+
 class SettingsController(context: Context) {
     private val prefs = context.getSharedPreferences("fatateer_settings", Context.MODE_PRIVATE)
 
@@ -47,6 +75,9 @@ class SettingsController(context: Context) {
     private var _themeMode by mutableStateOf(ThemeMode.fromPrefs(prefs.getString("theme_mode", "system")))
     val themeMode: ThemeMode get() = _themeMode
 
+    private var _accentColor by mutableStateOf(AccentColor.fromPrefs(prefs.getString("accent_color", "blue")))
+    val accentColor: AccentColor get() = _accentColor
+
     val strings: AppStrings
         get() = if (language == AppLanguage.ENGLISH) AppStrings.En else AppStrings.Ar
 
@@ -58,6 +89,11 @@ class SettingsController(context: Context) {
     fun setThemeMode(mode: ThemeMode) {
         _themeMode = mode
         prefs.edit().putString("theme_mode", mode.prefsValue).apply()
+    }
+
+    fun setAccentColor(color: AccentColor) {
+        _accentColor = color
+        prefs.edit().putString("accent_color", color.nameRes).apply()
     }
 
     fun isDark(systemDark: Boolean): Boolean = when (themeMode) {
@@ -129,6 +165,8 @@ sealed class AppStrings {
     abstract val themeSystem: String
     abstract val themeDark: String
     abstract val themeLight: String
+    abstract val themeAppColor: String
+    abstract val appColorTitle: String
     abstract val languageTitle: String
     abstract val languageArabic: String
     abstract val languageEnglish: String
@@ -206,6 +244,8 @@ sealed class AppStrings {
         override val themeSystem = "حسب النظام"
         override val themeDark = "داكن"
         override val themeLight = "فاتح"
+        override val themeAppColor = "لون التطبيق"
+        override val appColorTitle = "🎨 الثيم"
         override val languageTitle = "اللغة"
         override val languageArabic = "العربية"
         override val languageEnglish = "English"
@@ -284,6 +324,8 @@ sealed class AppStrings {
         override val themeSystem = "System"
         override val themeDark = "Dark"
         override val themeLight = "Light"
+        override val themeAppColor = "App Color"
+        override val appColorTitle = "🎨 Theme"
         override val languageTitle = "Language"
         override val languageArabic = "العربية"
         override val languageEnglish = "English"
