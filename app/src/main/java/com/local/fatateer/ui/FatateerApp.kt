@@ -30,8 +30,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowDown
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -1139,7 +1137,6 @@ private fun shareDayLogs(context: android.content.Context, period: String, logs:
     context.startActivity(Intent.createChooser(intent, s.shareVia))
 }
 
-@Composable
 @Composable
 private fun BackupRestoreDialog(
     onDismiss: () -> Unit,
