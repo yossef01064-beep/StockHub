@@ -420,12 +420,22 @@ fun FatateerApp(
                     }
 
                     ItemEditorDialog(
-                                TextButton(onClick = onDismiss) {
-                                    Text(s.cancel)
-                                }
-                            }
-                        )
-                    }
+                        title = s.addItem,
+                        initial = Item(id = 0L, name = "", category = defaultCategory, quantity = 0),
+                        allowedCategories = chipCats,
+                        onDismiss = { showNew = false },
+                        onSave = { newItem ->
+                            vm.save(newItem)
+                            showNew = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SettingsScreen(
 
                     ItemEditorDialog(
                             title = s.addItem,
