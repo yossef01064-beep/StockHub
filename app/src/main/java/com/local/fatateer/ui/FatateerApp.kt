@@ -355,11 +355,6 @@ fun FatateerApp(
                             }
                         )
                     }
-                    if (showThemeScreen) {
-                        ThemeScreen(
-                            onDismiss = { showThemeScreen = false }
-                        )
-                    }
                     if (showNew) {
                         ItemEditorDialog(
                             title = s.addItem,
@@ -380,7 +375,7 @@ fun FatateerApp(
 }
 
 @Composable
-private fun ThemeDialog(onDismiss: () -> Unit) {
+private fun ThemeScreen(onDismiss: () -> Unit) {
     val settings = LocalSettingsController.current
     val s = LocalAppStrings.current
     val accentColors = listOf(
@@ -1196,7 +1191,9 @@ private fun shareDayLogs(context: android.content.Context, period: String, logs:
 }
 
 
-    onDismiss: () -> Unit,
+    @Composable
+    private fun BackupRestoreDialog(
+        onDismiss: () -> Unit,
     onExport: () -> Unit,
     onRestore: () -> Unit
 ) {
