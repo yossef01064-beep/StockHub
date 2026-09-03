@@ -156,4 +156,78 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
     fun clearLogs() {
         viewModelScope.launch { logDao.clearAll() }
     }
+
+    fun exportBackup(uri: Uri, context: Application) {
+        viewModelScope.launch {
+            val dbFile = context.getDatabasePath("app_database")
+            val imageDir = File(context.filesDir, "item_images")
+
+            try {
+                val zipOutputStream = ZipOutputStream(context.contentResolver.openOutputStream(uri))
+
+                // Add database to zip
+                zipOutputStream.putNextEntry(ZipEntry("app_database"))
+                dbFile.copyTo(zipOutputStream, bufferSize = 8192)
+                zipOutputStream.closeEntry()
+
+                // Add images to zip
+                imageDir.listFiles()?.forEach { file ->
+                    zipOutputStream.putNextEntry(ZipEntry(file.name))
+                    file.copyTo(zipOutputStream, bufferSize = 8192)
+                    zipOutputStream.closeEntry()
+                }
+
+                zipOutputStream.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun restoreBackup(uri: Uri, context: Application) {
+        viewModelScope.launch {
+            val tempDir = File(context.cacheDir, "temp_backup").apply { mkdirs() }
+            val zipFile = File(tempDir, "backup.zip")
+
+            try {
+                // Copy the backup file to cache
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    zipFile.outputStream().use { output -> input.copyTo(output) }
+                }
+
+                // Extract the zip file
+                val zipInputStream = ZipInputStream(zipFile.inputStream())
+                val buffer = ByteArray(8192)
+
+                var entry: ZipEntry?
+                while (zipInputStream.readEntry().also { entry = it } != null) {
+                    if (entry?.name == "app_database") {
+                        // Replace the database
+                        val dbFile = context.getDatabasePath("app_database")
+                        dbFile.parentFile?.mkdirs()
+                        FileOutputStream(dbFile).use { output ->
+                            zipInputStream.use { input -> input.copyTo(output, buffer) }
+                        }
+                    } else if (entry?.name != null) {
+                        // Save images to internal storage
+                        val imageDir = File(context.filesDir, "item_images")
+                        imageDir.mkdirs()
+                        val imageFile = File(imageDir, entry.name)
+                        FileOutputStream(imageFile).use { output ->
+                            zipInputStream.use { input -> input.copyTo(output, buffer) }
+                        }
+                    }
+                    zipInputStream.closeEntry()
+                }
+
+                zipInputStream.close()
+                zipFile.delete()
+
+                // Refresh data
+                state.value = state.value.copy()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 }

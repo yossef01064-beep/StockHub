@@ -180,6 +180,29 @@ fun FatateerApp(
                         Divider()
                         Spacer(Modifier.height(20.dp))
                         NavigationDrawerItem(
+                            label = { Text(s.themeTitle) },
+                            selected = false,
+                            onClick = { showThemeDialog = true; drawerScope.launch { drawerState.close() } },
+                            icon = { Icon(Icons.Default.Palette, null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        NavigationDrawerItem(
+                            label = { Text(s.export) },
+                            selected = false,
+                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
+                            icon = { Icon(Icons.Default.Save, null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        NavigationDrawerItem(
+                            label = { Text(s.restore) },
+                            selected = false,
+                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
+                            icon = { Icon(Icons.Default.Restore, null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Divider()
+                        Spacer(Modifier.height(8.dp))
+                        NavigationDrawerItem(
                             label = { Text(s.settingsTitle) },
                             selected = showSettings,
                             onClick = { showSettings = true; drawerScope.launch { drawerState.close() } },
@@ -206,12 +229,7 @@ fun FatateerApp(
                             }
                         },
                         actions = {
-                            IconButton(onClick = { showThemeDialog = true }) {
-                                Icon(Icons.Default.Palette, contentDescription = "Theme")
-                            }
-                            IconButton(onClick = { showBackupDialog = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Options")
-                            }
+                            // Removed standalone theme/backup buttons
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -258,6 +276,7 @@ fun FatateerApp(
                                     state = state,
                                     chipCats = if (MainTab.values()[page] == MainTab.SPARE) Categories.spareParts else Categories.sales,
                                     onQuery = vm::setQuery, onCategory = vm::setCategory, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, onSell = { itemToSell = it },
+                                    showSellButton = (MainTab.values()[page] == MainTab.SALES),
                                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
@@ -319,9 +338,56 @@ fun FatateerApp(
                     if (showBackupDialog) {
                         BackupRestoreDialog(
                             onDismiss = { showBackupDialog = false },
-                            onExport = { /* handled inside dialog or stub */ },
-                            onRestore = { /* handled inside dialog or stub */ }
+                            onExport = { exportBackup() },
+                            onRestore = { restoreBackup() }
                         )
+                    }
+
+                    // Export/Restore Logic
+                    fun exportBackup() {
+                        val context = LocalContext.current
+                        val vm = viewModel()
+                        val s = LocalAppStrings.current
+
+                        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "application/octet-stream"
+                            putExtra(Intent.EXTRA_TITLE, "backup_${System.currentTimeMillis()}.stockhub")
+                        }
+
+                        val launcher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.StartActivityForResult()
+                        ) { uri ->
+                            if (uri != null) {
+                                vm.exportBackup(uri, context)
+                            }
+                        }
+
+                        launcher.launch(intent)
+                    }
+
+                    fun restoreBackup() {
+                        val context = LocalContext.current
+                        val vm = viewModel()
+                        val s = LocalAppStrings.current
+
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "application/octet-stream"
+                            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream"))
+                        }
+
+                        val launcher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.StartActivityForResult()
+                        ) { result ->
+                            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                                result.data?.data?.let { uri ->
+                                    vm.restoreBackup(uri, context)
+                                }
+                            }
+                        }
+
+                        launcher.launch(intent)
                     }
                     }
                 }
@@ -512,7 +578,7 @@ private fun MiniStat(title: String, value: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery: (String) -> Unit, onCategory: (String?) -> Unit, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, modifier: Modifier = Modifier) {
+private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery: (String) -> Unit, onCategory: (String?) -> Unit, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, showSellButton: Boolean = false, modifier: Modifier = Modifier) {
     val s = LocalAppStrings.current
 
     Column(modifier) {
@@ -549,6 +615,7 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                         ItemCard(
                             item = item, onPlus = { onPlus(item) }, onMinus = { onMinus(item) }, onEdit = { onEdit(item) }, onDelete = { onDelete(item) }, onSell = { onSell(item) },
                             isSelected = false,
+                            showSellButton = showSellButton,
                             onSelect = {}
                         )
                     }
