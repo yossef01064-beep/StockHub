@@ -101,7 +101,7 @@ fun FatateerApp(
     var showLowStock by remember { mutableStateOf(false) }
     var showLog by remember { mutableStateOf(false) }
     var showBackupDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
+    var showThemeScreen by remember { mutableStateOf(false) }
     val application = vm.getApplication<Application>()
 
     // Backup/Restore Launchers
@@ -214,21 +214,21 @@ fun FatateerApp(
                         NavigationDrawerItem(
                             label = { Text(s.themeTitle) },
                             selected = false,
-                            onClick = { showThemeDialog = true; drawerScope.launch { drawerState.close() } },
+                            onClick = { showThemeScreen = true; drawerScope.launch { drawerState.close() } },
                             icon = { Icon(Icons.Default.Palette, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         NavigationDrawerItem(
                             label = { Text(s.export) },
                             selected = false,
-                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
+                            onClick = { exportLauncher.launch(createExportIntent()) },
                             icon = { Icon(Icons.Default.Save, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         NavigationDrawerItem(
                             label = { Text(s.restore) },
                             selected = false,
-                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
+                            onClick = { restoreLauncher.launch(createRestoreIntent()) },
                             icon = { Icon(Icons.Default.Restore, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -314,9 +314,9 @@ fun FatateerApp(
                             }
                         }
                     }
-                    if (showThemeDialog) {
-                        ThemeDialog(
-                            onDismiss = { showThemeDialog = false }
+                    if (showThemeScreen) {
+                        ThemeScreen(
+                            onDismiss = { showThemeScreen = false }
                         )
                     }
                     itemToSell?.let { currentItem ->
@@ -355,6 +355,11 @@ fun FatateerApp(
                             }
                         )
                     }
+                    if (showThemeScreen) {
+                        ThemeScreen(
+                            onDismiss = { showThemeScreen = false }
+                        )
+                    }
                     if (showNew) {
                         ItemEditorDialog(
                             title = s.addItem,
@@ -367,13 +372,7 @@ fun FatateerApp(
                             }
                         )
                     }
-                    if (showBackupDialog) {
-                        BackupRestoreDialog(
-                            onDismiss = { showBackupDialog = false },
-                            onExport = { exportLauncher.launch(createExportIntent()) },
-                            onRestore = { restoreLauncher.launch(createRestoreIntent()) }
-                        )
-                    }
+
                 }
             }
         }
@@ -752,34 +751,41 @@ private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit
                 }
             }
             // Row 4: Quantity and Buttons
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(
-                    onClick = onMinus,
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                    modifier = Modifier.size(36.dp)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = s.minus, modifier = Modifier.size(18.dp))
-                }
-                Text("${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                IconButton(
-                    onClick = onPlus,
-                    colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White),
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = s.plus, modifier = Modifier.size(18.dp))
-                }
-                Spacer(Modifier.weight(1f))
-                if (showSellButton) {
                     IconButton(
-                        onClick = onSell,
-                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = Color.White),
+                        onClick = onMinus,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Default.ShoppingCart, contentDescription = s.sell, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Remove, contentDescription = s.minus, modifier = Modifier.size(18.dp))
+                    }
+                    Text("${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    IconButton(
+                        onClick = onPlus,
+                        colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = s.plus, modifier = Modifier.size(18.dp))
+                    }
+                }
+                if (showSellButton) {
+                    Button(
+                        onClick = onSell,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = Color.White),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(s.sell, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
             }
@@ -1189,8 +1195,7 @@ private fun shareDayLogs(context: android.content.Context, period: String, logs:
     context.startActivity(Intent.createChooser(intent, s.shareVia))
 }
 
-@Composable
-private fun BackupRestoreDialog(
+
     onDismiss: () -> Unit,
     onExport: () -> Unit,
     onRestore: () -> Unit
@@ -1244,7 +1249,9 @@ private fun SaleLogPage(logs: List<SaleLog>, onBack: () -> Unit, onDeleteLog: (S
     var filterMode by remember { mutableStateOf(FilterMode.DAILY) }
     var showDetails by remember { mutableStateOf<SaleLog?>(null) }
     var expandedDays by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
-    BackHandler(enabled = showDetails != null) { showDetails = null }
+    BackHandler(enabled = showDetails != null) {
+        showDetails = null
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
