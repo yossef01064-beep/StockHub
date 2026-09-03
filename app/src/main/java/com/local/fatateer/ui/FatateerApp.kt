@@ -298,9 +298,13 @@ fun FatateerApp(
                         )
                     }
                     }
+                }
+            }
+        }
+    }
 
-                    @Composable
-                    private fun ThemeDialog(onDismiss: () -> Unit) {
+    @Composable
+    private fun ThemeDialog(onDismiss: () -> Unit) {
                         val settings = LocalSettingsController.current
                         val s = LocalAppStrings.current
                         val accentColors = listOf(
@@ -418,30 +422,6 @@ fun FatateerApp(
                             }
                         )
                     }
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun SettingsScreen(
-
-                    ItemEditorDialog(
-                            title = s.addItem,
-                            initial = Item(id = 0L, name = "", category = defaultCategory, quantity = 0),
-                            allowedCategories = chipCats,
-                            onDismiss = { showNew = false },
-                            onSave = { newItem ->
-                                vm.save(newItem)
-                                showNew = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun SettingsScreen(modifier: Modifier = Modifier, onOpenLog: () -> Unit) {
