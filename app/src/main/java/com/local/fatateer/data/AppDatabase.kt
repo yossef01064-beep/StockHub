@@ -12,7 +12,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
     abstract fun saleLogDao(): SaleLogDao
     abstract fun orderRequestDao(): OrderRequestDao
-    abstract fun orderRequestDao(): OrderRequestDao
 
     companion object {
         /** الاسم الفعلي لملف قاعدة البيانات على القرص - يُستخدم أيضًا في Export/Restore */
@@ -44,15 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE IF NOT EXISTS `order_requests` (
-                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                    `itemName` TEXT NOT NULL,
-                    `itemImagePath` TEXT,
-                    `deviceName` TEXT NOT NULL,
-                    `customerName` TEXT NOT NULL,
-                    `customerPhone` TEXT NOT NULL,
-                    `timestamp` INTEGER NOT NULL
-                )")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `order_requests` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `itemName` TEXT NOT NULL, `itemImagePath` TEXT, `deviceName` TEXT NOT NULL, `customerName` TEXT NOT NULL, `customerPhone` TEXT NOT NULL, `timestamp` INTEGER NOT NULL)")
             }
         }
 
