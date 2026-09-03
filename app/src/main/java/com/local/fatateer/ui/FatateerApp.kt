@@ -1,5 +1,6 @@
 package com.local.fatateer.ui
 
+import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -101,13 +102,14 @@ fun FatateerApp(
     var showLog by remember { mutableStateOf(false) }
     var showBackupDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    val application = vm.getApplication<Application>()
 
     // Backup/Restore Launchers
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            result.data?.data?.let { uri -> vm.exportBackup(uri, LocalContext.current.applicationContext) }
+            result.data?.data?.let { uri -> vm.exportBackup(uri, application) }
         }
     }
 
@@ -115,7 +117,7 @@ fun FatateerApp(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            result.data?.data?.let { uri -> vm.restoreBackup(uri, LocalContext.current.applicationContext) }
+            result.data?.data?.let { uri -> vm.restoreBackup(uri, application) }
         }
     }
 

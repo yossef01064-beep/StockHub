@@ -84,13 +84,15 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
     private val queryFlow = MutableStateFlow("")
     private val categoryFlow = MutableStateFlow<String?>(null)
     private val tabFlow = MutableStateFlow(MainTab.HOME)
+    private val refreshFlow = MutableStateFlow(0)
 
     val state = combine(
         dao.observeAll(),
         queryFlow,
         categoryFlow,
-        tabFlow
-    ) { list, query, cat, tab ->
+        tabFlow,
+        refreshFlow
+    ) { list, query, cat, tab, _ ->
         StockUiState(items = list, query = query, selectedCategory = cat, tab = tab)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StockUiState())
 
@@ -232,8 +234,7 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
 
                 // Refresh data
                 withContext(Dispatchers.Main) {
-                    // No reassignment, just trigger a recomposition
-                    state.value = state.value.copy()
+                    refreshFlow.value += 1
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
