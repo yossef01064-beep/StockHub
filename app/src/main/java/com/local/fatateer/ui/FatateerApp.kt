@@ -69,6 +69,19 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
+private fun createExportIntent(): Intent =
+    Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+        type = "application/zip"
+        putExtra(Intent.EXTRA_TITLE, "fatateer_backup.zip")
+        addCategory(Intent.CATEGORY_OPENABLE)
+    }
+
+private fun createRestoreIntent(): Intent =
+    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        type = "application/zip"
+        addCategory(Intent.CATEGORY_OPENABLE)
+    }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FatateerApp(
@@ -204,23 +217,16 @@ fun FatateerApp(
                             modifier = Modifier.fillMaxWidth()
                         )
                         NavigationDrawerItem(
-                            label = { Text(s.themeTitle) },
-                            selected = false,
-                            onClick = { showThemeDialog = true; drawerScope.launch { drawerState.close() } },
-                            icon = { Icon(Icons.Default.Palette, null) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        NavigationDrawerItem(
                             label = { Text(s.export) },
                             selected = false,
-                            onClick = { handleExportBackup() },
+                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
                             icon = { Icon(Icons.Default.Save, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         NavigationDrawerItem(
                             label = { Text(s.restore) },
                             selected = false,
-                            onClick = { handleRestoreBackup() },
+                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
                             icon = { Icon(Icons.Default.Restore, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -370,6 +376,7 @@ fun FatateerApp(
             }
         }
     }
+}
 
 @Composable
 private fun ThemeDialog(onDismiss: () -> Unit) {
