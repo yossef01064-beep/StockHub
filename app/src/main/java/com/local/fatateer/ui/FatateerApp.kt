@@ -187,6 +187,13 @@ fun FatateerApp(
                             modifier = Modifier.fillMaxWidth()
                         )
                         NavigationDrawerItem(
+                            label = { Text(s.themeTitle) },
+                            selected = false,
+                            onClick = { showThemeDialog = true; drawerScope.launch { drawerState.close() } },
+                            icon = { Icon(Icons.Default.Palette, null) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        NavigationDrawerItem(
                             label = { Text(s.export) },
                             selected = false,
                             onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
@@ -338,46 +345,41 @@ fun FatateerApp(
                     if (showBackupDialog) {
                         BackupRestoreDialog(
                             onDismiss = { showBackupDialog = false },
-                            onExport = { exportBackup() },
-                            onRestore = { restoreBackup() }
+                            onExport = { onExportBackup() },
+                        onRestore = { onRestoreBackup() }
                         )
                     }
 
-                    // Export/Restore Logic
-                    fun exportBackup() {
+                    // Export/Restore Handlers
+                    private fun onExportBackup() {
                         val context = LocalContext.current
                         val vm = viewModel()
                         val s = LocalAppStrings.current
+
+                        val exportLauncher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.StartActivityForResult()
+                        ) { result ->
+                            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                                result.data?.data?.let { uri ->
+                                    vm.exportBackup(uri, context)
+                                }
+                            }
+                        }
 
                         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
                             type = "application/octet-stream"
                             putExtra(Intent.EXTRA_TITLE, "backup_${System.currentTimeMillis()}.stockhub")
                         }
-
-                        val launcher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.StartActivityForResult()
-                        ) { uri ->
-                            if (uri != null) {
-                                vm.exportBackup(uri, context)
-                            }
-                        }
-
-                        launcher.launch(intent)
+                        exportLauncher.launch(intent)
                     }
 
-                    fun restoreBackup() {
+                    private fun onRestoreBackup() {
                         val context = LocalContext.current
                         val vm = viewModel()
                         val s = LocalAppStrings.current
 
-                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/octet-stream"
-                            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream"))
-                        }
-
-                        val launcher = rememberLauncherForActivityResult(
+                        val restoreLauncher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()
                         ) { result ->
                             if (result.resultCode == android.app.Activity.RESULT_OK) {
@@ -387,7 +389,12 @@ fun FatateerApp(
                             }
                         }
 
-                        launcher.launch(intent)
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = "application/octet-stream"
+                            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream"))
+                        }
+                        restoreLauncher.launch(intent)
                     }
                     }
                 }

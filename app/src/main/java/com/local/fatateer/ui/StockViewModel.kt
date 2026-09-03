@@ -1,6 +1,7 @@
 package com.local.fatateer.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.local.fatateer.data.AppDatabase
@@ -9,12 +10,18 @@ import com.local.fatateer.data.ImageStorage
 import com.local.fatateer.data.Item
 import com.local.fatateer.data.SaleLog
 import com.local.fatateer.data.SaleLogDao
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.*
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 enum class MainTab { HOME, SPARE, SALES }
 
@@ -158,26 +165,26 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun exportBackup(uri: Uri, context: Application) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val dbFile = context.getDatabasePath("app_database")
             val imageDir = File(context.filesDir, "item_images")
 
             try {
-                val zipOutputStream = ZipOutputStream(context.contentResolver.openOutputStream(uri))
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    ZipOutputStream(outputStream).use { zipOutputStream ->
+                        // Add database to zip
+                        zipOutputStream.putNextEntry(ZipEntry("app_database"))
+                        dbFile.inputStream().use { input -> input.copyTo(zipOutputStream) }
+                        zipOutputStream.closeEntry()
 
-                // Add database to zip
-                zipOutputStream.putNextEntry(ZipEntry("app_database"))
-                dbFile.copyTo(zipOutputStream, bufferSize = 8192)
-                zipOutputStream.closeEntry()
-
-                // Add images to zip
-                imageDir.listFiles()?.forEach { file ->
-                    zipOutputStream.putNextEntry(ZipEntry(file.name))
-                    file.copyTo(zipOutputStream, bufferSize = 8192)
-                    zipOutputStream.closeEntry()
+                        // Add images to zip
+                        imageDir.listFiles()?.forEach { file ->
+                            zipOutputStream.putNextEntry(ZipEntry(file.name))
+                            file.inputStream().use { input -> input.copyTo(zipOutputStream) }
+                            zipOutputStream.closeEntry()
+                        }
+                    }
                 }
-
-                zipOutputStream.close()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -185,7 +192,7 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun restoreBackup(uri: Uri, context: Application) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val tempDir = File(context.cacheDir, "temp_backup").apply { mkdirs() }
             val zipFile = File(tempDir, "backup.zip")
 
@@ -196,35 +203,37 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 // Extract the zip file
-                val zipInputStream = ZipInputStream(zipFile.inputStream())
-                val buffer = ByteArray(8192)
+                ZipInputStream(zipFile.inputStream()).use { zipInputStream ->
+                    val buffer = ByteArray(8192)
 
-                var entry: ZipEntry?
-                while (zipInputStream.readEntry().also { entry = it } != null) {
-                    if (entry?.name == "app_database") {
-                        // Replace the database
-                        val dbFile = context.getDatabasePath("app_database")
-                        dbFile.parentFile?.mkdirs()
-                        FileOutputStream(dbFile).use { output ->
-                            zipInputStream.use { input -> input.copyTo(output, buffer) }
+                    var entry: ZipEntry?
+                    while (zipInputStream.nextEntry.also { entry = it } != null) {
+                        if (entry?.name == "app_database") {
+                            // Replace the database
+                            val dbFile = context.getDatabasePath("app_database")
+                            dbFile.parentFile?.mkdirs()
+                            FileOutputStream(dbFile).use { output ->
+                                zipInputStream.copyTo(output, buffer.size)
+                            }
+                        } else if (entry?.name != null) {
+                            // Save images to internal storage
+                            val imageDir = File(context.filesDir, "item_images")
+                            imageDir.mkdirs()
+                            val imageFile = File(imageDir, entry.name)
+                            FileOutputStream(imageFile).use { output ->
+                                zipInputStream.copyTo(output, buffer.size)
+                            }
                         }
-                    } else if (entry?.name != null) {
-                        // Save images to internal storage
-                        val imageDir = File(context.filesDir, "item_images")
-                        imageDir.mkdirs()
-                        val imageFile = File(imageDir, entry.name)
-                        FileOutputStream(imageFile).use { output ->
-                            zipInputStream.use { input -> input.copyTo(output, buffer) }
-                        }
+                        zipInputStream.closeEntry()
                     }
-                    zipInputStream.closeEntry()
                 }
 
-                zipInputStream.close()
                 zipFile.delete()
 
                 // Refresh data
-                state.value = state.value.copy()
+                withContext(Dispatchers.Main) {
+                    state.value = state.value.copy()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
