@@ -133,17 +133,17 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
     private val orderRequestsFlow: Flow<List<OrderRequest>> = dbVersionFlow.flatMapLatest { orderRequestDao.observeAll() }
 
     val state = combine(
-        itemsFlow,
-        logsFlow,
-        orderRequestsFlow,
+        combine(itemsFlow, logsFlow, orderRequestsFlow) { items: List<Item>, logs: List<SaleLog>, orderRequests: List<OrderRequest> ->
+            Triple(items, logs, orderRequests)
+        },
         queryFlow,
         categoryFlow,
         tabFlow
-    ) { items, logs, orderRequests, query, cat, tab ->
+    ) { databaseState, query, cat, tab ->
         StockUiState(
-            items = items,
-            logs = logs,
-            orderRequests = orderRequests,
+            items = databaseState.first,
+            logs = databaseState.second,
+            orderRequests = databaseState.third,
             query = query,
             selectedCategory = cat,
             tab = tab
