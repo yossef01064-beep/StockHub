@@ -5,6 +5,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.local.fatateer.ui.locale.AccentColor
 
 private val Green = Color(0xFF0F3D3E)
 private val GreenLight = Color(0xFF2A9D8F)

@@ -197,6 +197,45 @@ sealed class AppStrings {
     abstract val priceMin: String
     abstract val priceMax: String
 
+    // Theme accent color names
+    abstract val ar_blue: String
+    abstract val ar_green: String
+    abstract val ar_purple: String
+    abstract val ar_red: String
+    abstract val ar_orange: String
+    abstract val ar_yellow: String
+    abstract val ar_pink: String
+    abstract val ar_teal: String
+    abstract val ar_deep_purple: String
+    abstract val ar_brown: String
+
+    // Sales / dialogs
+    abstract val sell: String
+    abstract val priceMustBePositive: String
+    abstract val priceTooHigh: String
+    abstract val qtyMustBePositive: String
+    abstract val qtyExceedsStock: String
+    abstract val collapse: String
+    abstract val expand: String
+    abstract val operations: String
+    abstract val share: String
+    abstract val shareVia: String
+    abstract val date: String
+    abstract val item: String
+    abstract val customer: String
+    abstract val phone: String
+    abstract val totalDay: String
+    abstract val backupRestore: String
+    abstract val backupRestoreTitle: String
+    abstract val export: String
+    abstract val restore: String
+    abstract val exportBackup: String
+    abstract val restoreBackup: String
+    abstract val close: String
+    abstract val daily: String
+    abstract val monthly: String
+    abstract val back: String
+
     abstract fun categoryLabel(key: String): String
 
     object Ar : AppStrings() {
@@ -275,6 +314,43 @@ sealed class AppStrings {
         override val minQuantity = "حد الطلب"
         override val priceMin = "أقل سعر"
         override val priceMax = "أعلى سعر"
+
+        override val ar_blue = "أزرق"
+        override val ar_green = "أخضر"
+        override val ar_purple = "بنفسجي"
+        override val ar_red = "أحمر"
+        override val ar_orange = "برتقالي"
+        override val ar_yellow = "أصفر"
+        override val ar_pink = "وردي"
+        override val ar_teal = "تركواز"
+        override val ar_deep_purple = "بنفسجي غامق"
+        override val ar_brown = "بني"
+
+        override val sell = "بيع"
+        override val priceMustBePositive = "السعر يجب أن يكون أكبر من صفر"
+        override val priceTooHigh = "السعر مرتفع جدًا"
+        override val qtyMustBePositive = "الكمية يجب أن تكون أكبر من صفر"
+        override val qtyExceedsStock = "الكمية أكبر من المتوفر"
+        override val collapse = "طي"
+        override val expand = "توسيع"
+        override val operations = "عمليات"
+        override val share = "مشاركة"
+        override val shareVia = "مشاركة عبر"
+        override val date = "التاريخ"
+        override val item = "الصنف"
+        override val customer = "الزبون"
+        override val phone = "الهاتف"
+        override val totalDay = "إجمالي اليوم"
+        override val backupRestore = "نسخ احتياطي / استعادة"
+        override val backupRestoreTitle = "النسخ الاحتياطي"
+        override val export = "تصدير"
+        override val restore = "استعادة"
+        override val exportBackup = "تصدير نسخة احتياطية"
+        override val restoreBackup = "استعادة نسخة احتياطية"
+        override val close = "إغلاق"
+        override val daily = "يومي"
+        override val monthly = "شهري"
+        override val back = "رجوع"
 
         override fun categoryLabel(key: String): String = key
     }
@@ -355,6 +431,43 @@ sealed class AppStrings {
         override val minQuantity = "Min Quantity"
         override val priceMin = "Min Price"
         override val priceMax = "Max Price"
+
+        override val ar_blue = "Blue"
+        override val ar_green = "Green"
+        override val ar_purple = "Purple"
+        override val ar_red = "Red"
+        override val ar_orange = "Orange"
+        override val ar_yellow = "Yellow"
+        override val ar_pink = "Pink"
+        override val ar_teal = "Teal"
+        override val ar_deep_purple = "Deep Purple"
+        override val ar_brown = "Brown"
+
+        override val sell = "Sell"
+        override val priceMustBePositive = "Price must be positive"
+        override val priceTooHigh = "Price is too high"
+        override val qtyMustBePositive = "Quantity must be positive"
+        override val qtyExceedsStock = "Quantity exceeds stock"
+        override val collapse = "Collapse"
+        override val expand = "Expand"
+        override val operations = "ops"
+        override val share = "Share"
+        override val shareVia = "Share via"
+        override val date = "Date"
+        override val item = "Item"
+        override val customer = "Customer"
+        override val phone = "Phone"
+        override val totalDay = "Day total"
+        override val backupRestore = "Backup / Restore"
+        override val backupRestoreTitle = "Backup"
+        override val export = "Export"
+        override val restore = "Restore"
+        override val exportBackup = "Export backup"
+        override val restoreBackup = "Restore backup"
+        override val close = "Close"
+        override val daily = "Daily"
+        override val monthly = "Monthly"
+        override val back = "Back"
 
         private val map = mapOf(
             // Spare parts

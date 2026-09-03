@@ -5,26 +5,37 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowDown
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +46,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -44,10 +57,19 @@ import coil.compose.AsyncImage
 import com.local.fatateer.data.Categories
 import com.local.fatateer.data.ImageStorage
 import com.local.fatateer.data.Item
+import com.local.fatateer.data.SaleLog
 import com.local.fatateer.ui.locale.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -221,8 +243,7 @@ fun FatateerApp(
         SaleLogPage(
             logs = logs,
             onBack = { showLog = false },
-            onDeleteLog = { vm.deleteSaleLog(it) },
-            showBackupDialog = { showBackupDialog = it }
+            onDeleteLog = { vm.deleteSaleLog(it) }
         )
     } else if (showSettings) {
         SettingsScreen(
@@ -297,17 +318,24 @@ fun FatateerApp(
                             }
                         )
                     }
+                    if (showBackupDialog) {
+                        BackupRestoreDialog(
+                            onDismiss = { showBackupDialog = false },
+                            onExport = { /* handled inside dialog or stub */ },
+                            onRestore = { /* handled inside dialog or stub */ }
+                        )
+                    }
                     }
                 }
             }
         }
     }
 
-    @Composable
-    private fun ThemeDialog(onDismiss: () -> Unit) {
-                        val settings = LocalSettingsController.current
-                        val s = LocalAppStrings.current
-                        val accentColors = listOf(
+@Composable
+private fun ThemeDialog(onDismiss: () -> Unit) {
+    val settings = LocalSettingsController.current
+    val s = LocalAppStrings.current
+    val accentColors = listOf(
                             AccentColor.BLUE,
                             AccentColor.GREEN,
                             AccentColor.PURPLE,
@@ -419,9 +447,14 @@ fun FatateerApp(
                                         }
                                     }
                                 }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = onDismiss) {
+                                    Text(s.close)
+                                }
                             }
                         )
-                    }
+}
 
 @Composable
 private fun SettingsScreen(modifier: Modifier = Modifier, onOpenLog: () -> Unit) {
@@ -1071,8 +1104,7 @@ private fun SaleLogRow(
     }
 }
 
-private fun shareDayLogs(period: String, logs: List<SaleLog>) {
-    val s = LocalAppStrings.current
+private fun shareDayLogs(context: android.content.Context, period: String, logs: List<SaleLog>, s: AppStrings) {
     val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
     val formattedDate = try {
         dateFormat.format(Date(period.toLong()))
@@ -1104,9 +1136,10 @@ private fun shareDayLogs(period: String, logs: List<SaleLog>) {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, shareText)
     }
-    LocalContext.current.startActivity(Intent.createChooser(intent, s.shareVia))
+    context.startActivity(Intent.createChooser(intent, s.shareVia))
 }
 
+@Composable
 @Composable
 private fun BackupRestoreDialog(
     onDismiss: () -> Unit,
@@ -1156,207 +1189,13 @@ private fun BackupRestoreDialog(
 }
 
 @Composable
-private fun ExpandableDayGroup(
-    period: String,
-    logs: List<SaleLog>,
-    total: Double,
-    isExpanded: Boolean,
-    onExpandChange: (Boolean) -> Unit,
-    onLogClick: (SaleLog) -> Unit,
-    onDeleteLog: (SaleLog) -> Unit,
-    onShareDay: () -> Unit
-) {
-    val s = LocalAppStrings.current
-    val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()) }
-    val formattedDate = try {
-        dateFormat.format(Date(period.toLong()))
-    } catch (e: Exception) {
-        period
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onExpandChange(!isExpanded) }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) s.collapse else s.expand
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    formattedDate,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("${logs.size} ${s.operations} • ${total.toInt()} جنيه", color = MaterialTheme.colorScheme.secondary)
-            }
-
-            AnimatedVisibility(
-                visible = isExpanded,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        IconButton(onClick = onShareDay) {
-                            Icon(Icons.Default.Share, contentDescription = s.share)
-                        }
-                    }
-
-                    logs.forEach { log ->
-                        SaleLogRow(
-                            log = log,
-                            onClick = { onLogClick(log) },
-                            onDelete = { onDeleteLog(log) }
-                        )
-                        Divider(modifier = Modifier.padding(horizontal = 16.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SaleLogRow(
-    log: SaleLog,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val s = LocalAppStrings.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(log.itemName, fontWeight = FontWeight.Medium)
-            Text("${log.quantity} × ${log.price} جنيه", color = MaterialTheme.colorScheme.secondary)
-        }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = s.delete, tint = MaterialTheme.colorScheme.error)
-        }
-    }
-}
-
-private fun shareDayLogs(period: String, logs: List<SaleLog>) {
-    val s = LocalAppStrings.current
-    val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault())
-    val formattedDate = try {
-        dateFormat.format(Date(period.toLong()))
-    } catch (e: Exception) {
-        period
-    }
-
-    val shareText = buildString {
-        append("${s.salesLogTitle}\n")
-        append("${s.date}: $formattedDate\n\n")
-
-        logs.forEach { log ->
-            append("${s.item}: ${log.itemName}\n")
-            append("${s.quantity}: ${log.quantity}\n")
-            append("${s.price}: ${log.price} جنيه\n")
-            if (log.customerName.isNotBlank()) {
-                append("${s.customer}: ${log.customerName}\n")
-            }
-            if (log.customerPhone.isNotBlank()) {
-                append("${s.phone}: ${log.customerPhone}\n")
-            }
-            append("\n---\n")
-        }
-
-        append("${s.totalDay}: ${logs.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity }.toInt()} جنيه")
-    }
-
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, shareText)
-    }
-    LocalContext.current.startActivity(Intent.createChooser(intent, s.shareVia))
-}
-
-@Composable
-private fun BackupRestoreDialog(
-    onDismiss: () -> Unit,
-    onExport: () -> Unit,
-    onRestore: () -> Unit
-) {
-    val s = LocalAppStrings.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(s.backupRestore) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(
-                    onClick = onExport,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(s.export)
-                    }
-                }
-                Button(
-                    onClick = onRestore,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Icon(Icons.Default.Restore, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(s.restore)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(s.cancel)
-            }
-        }
-    )
-}
-
-@Composable
-private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () -> Unit, onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit) {
-
+private fun SaleLogPage(logs: List<SaleLog>, onBack: () -> Unit, onDeleteLog: (SaleLog) -> Unit) {
+    val context = LocalContext.current
     val s = LocalAppStrings.current
     var filterMode by remember { mutableStateOf(FilterMode.DAILY) }
-    var showDetails by remember { mutableStateOf<com.local.fatateer.data.SaleLog?>(null) }
+    var showDetails by remember { mutableStateOf<SaleLog?>(null) }
     var expandedDays by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
-    var showBackupDialog by remember { mutableStateOf(false) }
     BackHandler(enabled = showDetails != null) { showDetails = null }
-    
-    // Prevent multiple dialogs from being open at once
-    LaunchedEffect(showDetails) {
-        if (showDetails == null) {
-            // Ensure no lingering dialogs when closed
-        }
-    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -1401,7 +1240,7 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
                                 },
                                 onLogClick = { log -> showDetails = log },
                                 onDeleteLog = onDeleteLog,
-                                onShareDay = { shareDayLogs(period, periodLogs) }
+                                onShareDay = { shareDayLogs(context, period, periodLogs, s) }
                             )
                         }
                     }
@@ -1413,409 +1252,10 @@ private fun SaleLogPage(logs: List<com.local.fatateer.data.SaleLog>, onBack: () 
     showDetails?.let { log ->
         SaleDetailDialog(log = log, onDismiss = { showDetails = null })
     }
-
-    if (showBackupDialog) {
-        BackupRestoreDialog(
-            onDismiss = { showBackupDialog = false },
-            onExport = { exportBackup() },
-            onRestore = { restoreBackup() }
-        )
-    }
-
-    @Composable
-    private fun BackupRestoreDialog(
-        onDismiss: () -> Unit,
-        onExport: () -> Unit,
-        onRestore: () -> Unit
-    ) {
-        val s = LocalAppStrings.current
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text(s.backupRestoreTitle) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Button(
-                        onClick = onExport,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(s.exportBackup)
-                        }
-                    }
-                    Button(
-                        onClick = onRestore,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(s.restoreBackup)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = onDismiss) {
-                    Text(s.cancel)
-                }
-            }
-        )
-    }
-
-    private suspend fun createBackupFile(context: Context): File? {
-        val database = (context.applicationContext as FatateerApp).database
-        val imageStorageDir = File(context.filesDir, "item_images")
-        val backupDir = context.cacheDir
-        val backupFileName = "StockHub_Backup_${System.currentTimeMillis()}.stockhub"
-        val backupFile = File(backupDir, backupFileName)
-
-        // Create a zip file containing database and images
-        ZipOutputStream(backupFile.outputStream()).use { zipOut ->
-            // Add database to zip
-            val dbFile = File(context.getDatabasePath("fatateer.db").path)
-            if (dbFile.exists()) {
-                addFileToZip(zipOut, dbFile, "database/fatateer.db")
-            }
-
-            // Add images to zip
-            if (imageStorageDir.exists() && imageStorageDir.isDirectory) {
-                imageStorageDir.listFiles()?.forEach { file ->
-                    addFileToZip(zipOut, file, "images/${file.name}")
-                }
-            }
-        }
-        return backupFile
-    }
-
-    private fun shareBackupFile(context: Context, file: File) {
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/zip"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(Intent.createChooser(shareIntent, "مشاركة النسخة الاحتياطية"))
-    }
-
-    private suspend fun pickBackupFile(context: Context): File? {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            type = "application/zip"
-            addCategory(Intent.CATEGORY_OPENABLE)
-        }
-        val resultLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                result.data?.data?.let { uri ->
-                    val file = copyBackupFileToCache(context, uri)
-                    if (file != null) {
-                        restoreFromBackup(context, file)
-                    }
-                }
-            }
-        }
-        resultLauncher.launch(intent)
-        return null // Handled via launcher
-    }
-
-    private suspend fun copyBackupFileToCache(context: Context, uri: Uri): File? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
-                val backupFile = File(context.cacheDir, "restore_backup_${System.currentTimeMillis()}.zip")
-                backupFile.outputStream().use { output ->
-                    inputStream.copyTo(output)
-                }
-                backupFile
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
-
-    private suspend fun restoreFromBackup(context: Context, backupFile: File) {
-        val database = (context.applicationContext as FatateerApp).database
-        val imageStorageDir = File(context.filesDir, "item_images")
-
-        // Clear existing data
-        database.clearAllTables()
-        if (imageStorageDir.exists()) {
-            imageStorageDir.deleteRecursively()
-        }
-
-        // Extract backup
-        ZipInputStream(backupFile.inputStream()).use { zipIn ->
-            var zipEntry: ZipEntry?
-            while (zipIn.nextEntry.also { zipEntry = it } != null) {
-                val filePath = zipEntry!!.name
-                val file = if (filePath.startsWith("database/")) {
-                    File(context.getDatabasePath("fatateer.db").path)
-                } else if (filePath.startsWith("images/")) {
-                    File(imageStorageDir, filePath.substringAfter("images/"))
-                } else {
-                    continue
-                }
-
-                if (zipEntry!!.isDirectory) {
-                    file.mkdirs()
-                } else {
-                    file.parentFile?.mkdirs()
-                    file.outputStream().use { output ->
-                        zipIn.copyTo(output)
-                    }
-                }
-            }
-        }
-
-        // Update image paths in database
-        val items = database.itemDao().getAll()
-        items.forEach { item ->
-            if (item.imagePath != null) {
-                val oldPath = File(item.imagePath)
-                val newPath = File(imageStorageDir, oldPath.name)
-                if (newPath.exists()) {
-                    database.itemDao().updateImagePath(item.id, newPath.absolutePath)
-                }
-            }
-        }
-
-        Toast.makeText(context, "تم استعادة البيانات بنجاح", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun addFileToZip(zipOut: ZipOutputStream, file: File, zipEntryName: String) {
-        ZipEntry(zipEntryName).also { zipOut.putNextEntry(it) }
-        file.inputStream().use { input ->
-            input.copyTo(zipOut)
-        }
-        zipOut.closeEntry()
-    }
-
-    @Composable
-    private fun SaleDetailDialog(log: SaleLog, onDismiss: () -> Unit) {
-        val s = LocalAppStrings.current
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("تفاصيل عملية البيع") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DetailRow(label = s.item, value = log.itemName)
-                    DetailRow(label = s.quantity, value = log.quantity.toString())
-                    DetailRow(label = s.price, value = "${log.price} جنيه")
-                    if (log.customerName.isNotBlank()) DetailRow(label = s.customerName, value = log.customerName)
-                    if (log.customerPhone.isNotBlank()) DetailRow(label = s.customerPhone, value = log.customerPhone)
-                    DetailRow(label = s.date, value = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(log.timestamp)))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = onDismiss) {
-                    Text(s.close)
-                }
-            }
-        )
-    }
-
-    @Composable
-    private fun ExpandableDayGroup(
-        period: String,
-        logs: List<SaleLog>,
-        total: Double,
-        isExpanded: Boolean,
-        onExpandChange: (Boolean) -> Unit,
-        onLogClick: (SaleLog) -> Unit,
-        onDeleteLog: (SaleLog) -> Unit
-    ) {
-        val s = LocalAppStrings.current
-        val expanded = remember { mutableStateOf(isExpanded) }
-        Column(
-            modifier = Modifier.animateContentSize()
-        ) {
-            val icon = if (expanded.value) Icons.Default.ExpandLess else Icons.Default.ExpandMore
-            val arrowIcon = if (expanded.value) Icons.AutoMirrored.Default.KeyboardArrowUp else Icons.AutoMirrored.Default.KeyboardArrowDown
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded.value = !expanded.value; onExpandChange(!expanded.value) }
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
-                Spacer(Modifier.width(8.dp))
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(period, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("${logs.size} ${s.operations} • ${total.toInt()} جنيه", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-                }
-                Icon(arrowIcon, contentDescription = null, modifier = Modifier.size(20.dp))
-            }
-
-            AnimatedVisibility(
-                visible = expanded.value,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("${total.toInt()} جنيه", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        IconButton(
-                            onClick = { shareDaySales(period, logs) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = s.share)
-                        }
-                    }
-
-                    logs.forEach { log ->
-                        SaleLogItem(
-                            log = log,
-                            onClick = { onLogClick(log) },
-                            onDelete = { onDeleteLog(log) }
-                        )
-                        Divider(modifier = Modifier.padding(vertical = 4.dp))
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun SaleLogItem(
-        log: SaleLog,
-        onClick: () -> Unit,
-        onDelete: () -> Unit
-    ) {
-        val s = LocalAppStrings.current
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(log.itemName, fontWeight = FontWeight.Medium)
-                Text("${log.quantity} × ${log.price} جنيه", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
-            }
-            if (log.customerName.isNotBlank() || log.customerPhone.isNotBlank()) {
-                Column(
-                    modifier = Modifier.padding(end = 16.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    if (log.customerName.isNotBlank()) Text(log.customerName, fontSize = 12.sp)
-                    if (log.customerPhone.isNotBlank()) Text(log.customerPhone, fontSize = 12.sp)
-                }
-            }
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = s.delete, tint = MaterialTheme.colorScheme.error)
-            }
-        }
-    }
-
-    private fun shareDaySales(period: String, logs: List<SaleLog>) {
-        val s = LocalAppStrings.current
-        val dateFormat = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US) }
-        val date = try {
-            dateFormat.parse(period)
-        } catch (e: Exception) {
-            java.util.Date(System.currentTimeMillis())
-        }
-        val formattedDate = java.text.SimpleDateFormat("d MMMM yyyy", java.util.Locale.getDefault()).format(date)
-
-        val shareText = buildString {
-            append("${s.salesLogTitle}\n")
-            append("${s.date}: $formattedDate\n\n")
-            append("-\n")
-            logs.forEach { log ->
-                append("المنتج: ${log.itemName}\n")
-                append("الكمية: ${log.quantity}\n")
-                append("السعر: ${log.price} جنيه\n")
-                if (log.customerName.isNotBlank()) append("العميل: ${log.customerName}\n")
-                if (log.customerPhone.isNotBlank()) append("الهاتف: ${log.customerPhone}\n")
-                append("-\n")
-            }
-            append("إجمالي اليوم: ${logs.sumOf { it.price.toDoubleOrNull() ?: 0.0 * it.quantity }.toInt()} جنيه")
-        }
-
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, shareText)
-        }
-        context.startActivity(Intent.createChooser(shareIntent, s.shareVia))
-    }
 }
 
 @Composable
-private fun TimelineGroup(
-    period: String, 
-    logs: List<com.local.fatateer.data.SaleLog>, 
-    total: Double, 
-    onLogClick: (com.local.fatateer.data.SaleLog) -> Unit,
-    onDeleteLog: (com.local.fatateer.data.SaleLog) -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-            Box(Modifier.size(12.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text(period, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        }
-        Column(modifier = Modifier.padding(start = 10.dp)) {
-            logs.forEach { log ->
-                Card(
-                    onClick = { onLogClick(log) },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${log.itemName} (${log.quantity})", fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                        Text("${log.price} ج.م", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(8.dp))
-                        IconButton(onClick = { onDeleteLog(log) }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-            }
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("إجمالي الفترة:", fontWeight = FontWeight.Bold)
-                    Text("${total} ج.م", fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SaleDetailDialog(log: com.local.fatateer.data.SaleLog, onDismiss: () -> Unit) {
+private fun SaleDetailDialog(log: SaleLog, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("تفاصيل عملية البيع") },

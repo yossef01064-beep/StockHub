@@ -27,11 +27,13 @@ class MainActivity : ComponentActivity() {
             val themeTick = settings.themeMode
             @Suppress("UNUSED_VARIABLE")
             val langTick = settings.language
+            @Suppress("UNUSED_VARIABLE")
+            val accentTick = settings.accentColor
 
             val dark = settings.isDark(systemDark)
             val strings = settings.strings
 
-            FatateerTheme(darkTheme = dark) {
+            FatateerTheme(darkTheme = dark, accentColor = settings.accentColor) {
                 CompositionLocalProvider(
                     LocalSettingsController provides settings,
                     LocalAppStrings provides strings
