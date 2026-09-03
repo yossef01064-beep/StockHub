@@ -133,6 +133,16 @@ sealed class AppStrings {
     abstract val outOfStock: String
     abstract val almostOut: String
     abstract val shopSummary: String
+    abstract val todayIncome: String
+    abstract val topSellingItems: String
+    abstract val orderRequests: String
+    abstract val orderRequestReceived: String
+    abstract val itemName: String
+    abstract val deviceName: String
+    abstract val addOrder: String
+    abstract val image: String
+    abstract val confirm: String
+    abstract val done: String
     abstract val totalItems: String
     abstract val neededOrder: String
     abstract val noLowStock: String
@@ -306,6 +316,16 @@ sealed class AppStrings {
         override val clearLogs = "مسح السجل"
         override val customerName = "اسم الزبون"
         override val customerPhone = "رقم الهاتف"
+        override val todayIncome = "إجمالي دخل اليوم"
+        override val topSellingItems = "الأصناف الأكثر مبيعًا"
+        override val orderRequests = "قائمة للي تحت الطلب"
+        override val orderRequestReceived = "تم الحصول عليه"
+        override val itemName = "اسم القطعة"
+        override val deviceName = "اسم الجهاز"
+        override val addOrder = "إضافة طلب"
+        override val image = "الصورة"
+        override val confirm = "تأكيد"
+        override val done = "تم"
         override val price = "السعر"
         override val quantity = "الكمية"
         override val notes = "ملاحظات"
@@ -459,6 +479,17 @@ sealed class AppStrings {
         override val customer = "Customer"
         override val phone = "Phone"
         override val totalDay = "Day total"
+        override val todayIncome = "Total Income Today"
+        override val topSellingItems = "الأصناف الأكثر مبيعًا"
+        override val totalTodayIncome = "إجمالي دخل اليوم"
+        override val orderRequests = "قائمة للي تحت الطلب"
+        override val orderRequestReceived = "تم الحصول عليه"
+        override val itemName = "اسم القطعة"
+        override val deviceName = "اسم الجهاز"
+        override val addOrder = "إضافة طلب جديد"
+        override val image = "Image"
+        override val confirm = "Confirm"
+        override val done = "Done"
         override val backupRestore = "Backup / Restore"
         override val backupRestoreTitle = "Backup"
         override val export = "Export"
@@ -492,6 +523,21 @@ sealed class AppStrings {
             "إكسسوار دش" to "Dish accessories",
             "بطاريات قلم 1.5V" to "1.5V AA batteries",
             "سماعات" to "Speakers",
+            // بطاقات الصفحة الرئيسية الجديدة
+            "إجمالي دخل اليوم" to "Total Income Today",
+            "النواقص" to "Low Stock",
+            "الأصناف الأكثر مبيعًا" to "Top Selling Items",
+            "قائمة للي تحت الطلب" to "Order Requests",
+            "تم الحصول عليه" to "تم الحصول عليه",
+            "اسم القطعة" to "اسم القطعة",
+            "اسم الجهاز" to "اسم الجهاز",
+            "اسم العميل" to "اسم العميل",
+            "رقم الموبايل" to "رقم الموبايل",
+            "اضافة طلب" to "إضافة طلب",
+            "الصورة" to "الصورة",
+            "تأكيد" to "تأكيد",
+            "حذف" to "حذف",
+            "تم" to "تم",
             // Remote groups
             "HD" to "HD",
             "SD" to "SD",

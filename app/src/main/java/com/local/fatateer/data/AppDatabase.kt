@@ -7,10 +7,12 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Item::class, SaleLog::class], version = 8, exportSchema = false)
+@Database(entities = [Item::class, SaleLog::class, OrderRequest::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
     abstract fun saleLogDao(): SaleLogDao
+    abstract fun orderRequestDao(): OrderRequestDao
+    abstract fun orderRequestDao(): OrderRequestDao
 
     companion object {
         /** الاسم الفعلي لملف قاعدة البيانات على القرص - يُستخدم أيضًا في Export/Restore */
@@ -40,6 +42,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `order_requests` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `itemName` TEXT NOT NULL,
+                    `itemImagePath` TEXT,
+                    `deviceName` TEXT NOT NULL,
+                    `customerName` TEXT NOT NULL,
+                    `customerPhone` TEXT NOT NULL,
+                    `timestamp` INTEGER NOT NULL
+                )")
+            }
+        }
+
         fun get(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -47,8 +63,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DB_FILE_NAME
                 )
-                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build()
                     .also { INSTANCE = it }
             }
