@@ -136,6 +136,7 @@ sealed class AppStrings {
     abstract val todayIncome: String
     abstract val topSellingItems: String
     abstract val orderRequests: String
+    abstract val noOrderRequests: String
     abstract val orderRequestReceived: String
     abstract val itemName: String
     abstract val deviceName: String
@@ -143,6 +144,13 @@ sealed class AppStrings {
     abstract val image: String
     abstract val confirm: String
     abstract val done: String
+    abstract val add: String
+    abstract val itemImage: String
+    abstract val markAsReceived: String
+    abstract val addOrderRequest: String
+    abstract val gallery: String
+    abstract val camera: String
+    abstract val piecesSold: String
     abstract val totalItems: String
     abstract val neededOrder: String
     abstract val noLowStock: String
@@ -319,6 +327,7 @@ sealed class AppStrings {
         override val todayIncome = "إجمالي دخل اليوم"
         override val topSellingItems = "الأصناف الأكثر مبيعًا"
         override val orderRequests = "قائمة للي تحت الطلب"
+        override val noOrderRequests = "لا يوجد طلبات حاليًا"
         override val orderRequestReceived = "تم الحصول عليه"
         override val itemName = "اسم القطعة"
         override val deviceName = "اسم الجهاز"
@@ -326,6 +335,13 @@ sealed class AppStrings {
         override val image = "الصورة"
         override val confirm = "تأكيد"
         override val done = "تم"
+        override val add = "إضافة"
+        override val itemImage = "صورة القطعة"
+        override val markAsReceived = "تم الاستلام"
+        override val addOrderRequest = "إضافة طلب"
+        override val gallery = "المعرض"
+        override val camera = "الكاميرا"
+        override val piecesSold = "قطعة مباعة"
         override val price = "السعر"
         override val quantity = "الكمية"
         override val notes = "ملاحظات"
@@ -480,16 +496,23 @@ sealed class AppStrings {
         override val phone = "Phone"
         override val totalDay = "Day total"
         override val todayIncome = "Total Income Today"
-        override val topSellingItems = "الأصناف الأكثر مبيعًا"
-        override val totalTodayIncome = "إجمالي دخل اليوم"
-        override val orderRequests = "قائمة للي تحت الطلب"
-        override val orderRequestReceived = "تم الحصول عليه"
-        override val itemName = "اسم القطعة"
-        override val deviceName = "اسم الجهاز"
-        override val addOrder = "إضافة طلب جديد"
+        override val topSellingItems = "Top Selling Items"
+        override val orderRequests = "Order Requests"
+        override val noOrderRequests = "No order requests"
+        override val orderRequestReceived = "Received"
+        override val itemName = "Item Name"
+        override val deviceName = "Device Name"
+        override val addOrder = "Add order"
         override val image = "Image"
         override val confirm = "Confirm"
         override val done = "Done"
+        override val add = "Add"
+        override val itemImage = "Item image"
+        override val markAsReceived = "Mark as received"
+        override val addOrderRequest = "Add order request"
+        override val gallery = "Gallery"
+        override val camera = "Camera"
+        override val piecesSold = "sold"
         override val backupRestore = "Backup / Restore"
         override val backupRestoreTitle = "Backup"
         override val export = "Export"

@@ -11,7 +11,6 @@ import com.local.fatateer.data.Item
 import com.local.fatateer.data.SaleLog
 import com.local.fatateer.data.OrderRequest
 import com.local.fatateer.data.SaleLogDao
-import com.local.fatateer.data.OrderRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,9 +28,6 @@ import java.util.zip.ZipOutputStream
 
 enum class MainTab { HOME, SPARE, SALES }
 
-data class TopSellingItem(val itemName: String, val totalQuantity: Int)
-
-
 data class TopSellingItem(
     val itemName: String,
     val totalQuantity: Int,
@@ -45,11 +41,7 @@ data class StockUiState(
     val orderRequests: List<OrderRequest> = emptyList(),
     val query: String = "",
     val selectedCategory: String? = null,
-    val tab: MainTab = MainTab.HOME,
-    val totalTodayIncome: Double = 0.0,
-    val topSellingItems: List<TopSellingItem> = emptyList(),
-    val lowStockSparePartsCount: Int = 0,
-    val lowStockSalesCount: Int = 0
+    val tab: MainTab = MainTab.HOME
 ) {
     private val scopeCategories: List<String>?
         get() = when (tab) {
@@ -106,30 +98,20 @@ data class StockUiState(
     val topSellingItems: List<TopSellingItem> get() = calculateTopSellingItems(logs)
     val lowStockSparePartsCount: Int get() = items.count { it.category in Categories.spareParts && it.quantity <= it.minQuantity }
     val lowStockSalesCount: Int get() = items.count { it.category in Categories.sales && it.quantity <= it.minQuantity }
-    val totalTodayIncome: Double get() = logs.filter { it.timestamp >= todayStart }.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity }
     val orderRequestsCount: Int get() = orderRequests.size
 
     private fun calculateTopSellingItems(logs: List<SaleLog>): List<TopSellingItem> {
         val monthStart = System.currentTimeMillis() - 30 * 24 * 60 * 60 * 1000L
-        val currentMonthStart = System.currentTimeMillis() - (System.currentTimeMillis() % (30 * 24 * 60 * 60 * 1000))
-        val salesItems = logs.filter {
-            it.category in Categories.sales && it.timestamp >= currentMonthStart
-        }.groupBy { it.itemName }
-            .mapValues { (_, logs) -> logs.sumOf { it.quantity } }
-            .toList()
-            .sortedByDescending { it.second }
-            .take(5)
-            .mapIndexed { index, (itemName, totalQuantity) -> TopSellingItem(itemName, totalQuantity, index + 1) }
         val monthLogs = logs.filter { it.timestamp >= monthStart && it.category in Categories.sales }
         val itemSalesMap = mutableMapOf<String, Int>()
         monthLogs.forEach { log ->
             itemSalesMap[log.itemName] = itemSalesMap.getOrDefault(log.itemName, 0) + log.quantity
         }
-        return itemSalesMap.toList().sortedByDescending { it.second }.take(5).map { (name, qty) -> TopSellingItem(name, qty) }
+        return itemSalesMap.toList()
+            .sortedByDescending { it.second }
+            .take(5)
+            .mapIndexed { index, (name, qty) -> TopSellingItem(name, qty, index + 1) }
     }
-
-    private val todayStart: Long
-        get() = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
 }
 
 class StockViewModel(app: Application) : AndroidViewModel(app) {
@@ -164,49 +146,11 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
             orderRequests = orderRequests,
             query = query,
             selectedCategory = cat,
-            tab = tab,
-            totalTodayIncome = totalTodayIncome,
-            topSellingItems = topSellingItems,
-            lowStockSparePartsCount = lowStockSparePartsCount,
-            lowStockSalesCount = lowStockSalesCount
+            tab = tab
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StockUiState())
 
     val salesLogs: Flow<List<SaleLog>> = logsFlow
-    val orderRequests: Flow<List<OrderRequest>> = dbVersionFlow.flatMapLatest { orderRequestDao.observeAll() }
-
-    // حساب إجمالي دخل اليوم
-    val totalTodayIncome: Flow<Double> = logsFlow.flatMapLatest { logs ->
-        val todayStart = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
-        val todayLogs = logs.filter { it.timestamp >= todayStart }
-        Flow.just(todayLogs.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity })
-    }
-
-    // حساب الأصناف الأكثر مبيعًا (للبيع فقط) خلال الشهر الحالي
-    val topSellingItems: Flow<List<TopSellingItem>> = logsFlow.flatMapLatest { logs ->
-
-    // حساب النواقص (قطع غيار وبيع)
-    val lowStockItems: Flow<List<Item>> = itemsFlow.flatMapLatest { items ->
-        Flow.just(items.filter { it.quantity <= it.minQuantity })
-    }
-
-    // تقسيم النواقص إلى قطع غيار وبيع
-    val lowStockSpareParts: Flow<List<Item>> = itemsFlow.flatMapLatest { items ->
-        Flow.just(items.filter { it.category in Categories.spareParts && it.quantity <= it.minQuantity })
-    }
-
-    val lowStockSales: Flow<List<Item>> = itemsFlow.flatMapLatest { items ->
-        Flow.just(items.filter { it.category in Categories.sales && it.quantity <= it.minQuantity })
-    }
-        val monthStart = System.currentTimeMillis() - 30 * 24 * 60 * 60 * 1000L
-        val monthLogs = logs.filter { it.timestamp >= monthStart && it.category in Categories.sales }
-        val itemSalesMap = mutableMapOf<String, Int>()
-        monthLogs.forEach { log ->
-            itemSalesMap[log.itemName] = itemSalesMap.getOrDefault(log.itemName, 0) + log.quantity
-        }
-        val sortedItems = itemSalesMap.toList().sortedByDescending { it.second }
-        Flow.just(sortedItems.take(5).map { (name, qty) -> TopSellingItem(name, qty) })
-    }
 
     fun setQuery(value: String) {
         queryFlow.value = value
@@ -265,12 +209,6 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
     fun addOrderRequest(order: OrderRequest) {
         viewModelScope.launch {
             orderRequestDao.insert(order)
-        }
-    }
-
-    fun deleteOrderRequest(order: OrderRequest) {
-        viewModelScope.launch {
-            orderRequestDao.delete(order)
         }
     }
 
