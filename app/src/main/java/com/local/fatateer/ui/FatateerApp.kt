@@ -89,6 +89,23 @@ fun FatateerApp(
     var showBackupDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
 
+    // Backup/Restore Launchers
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            result.data?.data?.let { uri -> vm.exportBackup(uri, LocalContext.current.applicationContext) }
+        }
+    }
+
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            result.data?.data?.let { uri -> vm.restoreBackup(uri, LocalContext.current.applicationContext) }
+        }
+    }
+
     val pagerState = rememberPagerState(pageCount = { 3 })
     val pagerScope = rememberCoroutineScope()
     val currentTab = MainTab.values().getOrElse(pagerState.currentPage) { MainTab.HOME }
@@ -196,14 +213,14 @@ fun FatateerApp(
                         NavigationDrawerItem(
                             label = { Text(s.export) },
                             selected = false,
-                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
+                            onClick = { handleExportBackup() },
                             icon = { Icon(Icons.Default.Save, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         NavigationDrawerItem(
                             label = { Text(s.restore) },
                             selected = false,
-                            onClick = { showBackupDialog = true; drawerScope.launch { drawerState.close() } },
+                            onClick = { handleRestoreBackup() },
                             icon = { Icon(Icons.Default.Restore, null) },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -345,57 +362,9 @@ fun FatateerApp(
                     if (showBackupDialog) {
                         BackupRestoreDialog(
                             onDismiss = { showBackupDialog = false },
-                            onExport = { onExportBackup() },
-                        onRestore = { onRestoreBackup() }
+                            onExport = { exportLauncher.launch(createExportIntent()) },
+                            onRestore = { restoreLauncher.launch(createRestoreIntent()) }
                         )
-                    }
-
-                    // Export/Restore Handlers
-                    private fun onExportBackup() {
-                        val context = LocalContext.current
-                        val vm = viewModel()
-                        val s = LocalAppStrings.current
-
-                        val exportLauncher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.StartActivityForResult()
-                        ) { result ->
-                            if (result.resultCode == android.app.Activity.RESULT_OK) {
-                                result.data?.data?.let { uri ->
-                                    vm.exportBackup(uri, context)
-                                }
-                            }
-                        }
-
-                        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/octet-stream"
-                            putExtra(Intent.EXTRA_TITLE, "backup_${System.currentTimeMillis()}.stockhub")
-                        }
-                        exportLauncher.launch(intent)
-                    }
-
-                    private fun onRestoreBackup() {
-                        val context = LocalContext.current
-                        val vm = viewModel()
-                        val s = LocalAppStrings.current
-
-                        val restoreLauncher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.StartActivityForResult()
-                        ) { result ->
-                            if (result.resultCode == android.app.Activity.RESULT_OK) {
-                                result.data?.data?.let { uri ->
-                                    vm.restoreBackup(uri, context)
-                                }
-                            }
-                        }
-
-                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/octet-stream"
-                            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream"))
-                        }
-                        restoreLauncher.launch(intent)
-                    }
                     }
                 }
             }

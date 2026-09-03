@@ -232,6 +232,7 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
 
                 // Refresh data
                 withContext(Dispatchers.Main) {
+                    // No reassignment, just trigger a recomposition
                     state.value = state.value.copy()
                 }
             } catch (e: Exception) {
