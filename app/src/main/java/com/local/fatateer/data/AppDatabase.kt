@@ -13,6 +13,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun saleLogDao(): SaleLogDao
 
     companion object {
+        /** الاسم الفعلي لملف قاعدة البيانات على القرص - يُستخدم أيضًا في Export/Restore */
+        const val DB_FILE_NAME = "fatateer.db"
+
         @Volatile private var INSTANCE: AppDatabase? = null
 
         /** يضيف عمود صورة المنتج دون فقدان البيانات الحالية */
@@ -42,13 +45,23 @@ abstract class AppDatabase : RoomDatabase() {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "fatateer.db"
+                    DB_FILE_NAME
                 )
                     .addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }
             }
+        }
+
+        /**
+         * يغلق الاتصال الحالي بقاعدة البيانات ويمسح الـsingleton، بحيث يمكن استبدال
+         * ملف القاعدة على القرص بأمان (يُستخدم أثناء Restore) ثم إعادة فتحه عبر get().
+         */
+        @Synchronized
+        fun closeAndClearInstance() {
+            INSTANCE?.close()
+            INSTANCE = null
         }
     }
 }

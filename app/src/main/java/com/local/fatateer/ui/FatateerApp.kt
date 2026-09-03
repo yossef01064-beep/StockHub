@@ -103,13 +103,19 @@ fun FatateerApp(
     var showBackupDialog by remember { mutableStateOf(false) }
     var showThemeScreen by remember { mutableStateOf(false) }
     val application = vm.getApplication<Application>()
+    val appContext = LocalContext.current
 
     // Backup/Restore Launchers
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            result.data?.data?.let { uri -> vm.exportBackup(uri, application) }
+            result.data?.data?.let { uri ->
+                vm.exportBackup(uri, application) { success, message ->
+                    val text = if (success) "تم إنشاء النسخة الاحتياطية بنجاح" else (message ?: "فشل إنشاء النسخة الاحتياطية")
+                    Toast.makeText(appContext, text, Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -117,7 +123,12 @@ fun FatateerApp(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
-            result.data?.data?.let { uri -> vm.restoreBackup(uri, application) }
+            result.data?.data?.let { uri ->
+                vm.restoreBackup(uri, application) { success, message ->
+                    val text = if (success) "تم استرداد البيانات بنجاح" else (message ?: "فشل استرداد النسخة الاحتياطية")
+                    Toast.makeText(appContext, text, Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -751,8 +762,8 @@ private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -762,7 +773,13 @@ private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit
                     ) {
                         Icon(Icons.Default.Remove, contentDescription = s.minus, modifier = Modifier.size(18.dp))
                     }
-                    Text("${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text(
+                        "${item.quantity}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(min = 28.dp)
+                    )
                     IconButton(
                         onClick = onPlus,
                         colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White),
