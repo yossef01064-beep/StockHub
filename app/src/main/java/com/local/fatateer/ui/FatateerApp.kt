@@ -128,7 +128,7 @@ fun FatateerApp(
         if (result.resultCode == android.app.Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 vm.restoreBackup(uri, application) { success, message ->
-                    val text = if (success) "تم استرداد البيانات بنجاح" else (message ?: "فشل استرداد النسخة الاحتياطية")
+                    val text = if (success) "تم الاسترداد بنجاح" else (message ?: "فشل استرداد النسخة الاحتياطية")
                     Toast.makeText(appContext, text, Toast.LENGTH_LONG).show()
                 }
             }
@@ -344,8 +344,6 @@ fun FatateerApp(
                                 MainTab.HOME -> HomeScreen(
                                     state = state,
                                     modifier = Modifier.fillMaxSize().padding(16.dp),
-                                    onOpenSpare = { goToTab(MainTab.SPARE) },
-                                    onOpenSales = { goToTab(MainTab.SALES) },
                                     onOpenLowStock = { showLowStock = true },
                                     onOpenTopSelling = { showTopSelling = true },
                                     onOpenOrderRequests = { showOrderRequests = true }
@@ -574,8 +572,6 @@ private fun ThemeModeRow(label: String, icon: ImageVector, selected: Boolean, on
 private fun HomeScreen(
     state: StockUiState,
     modifier: Modifier = Modifier,
-    onOpenSpare: () -> Unit,
-    onOpenSales: () -> Unit,
     onOpenLowStock: () -> Unit,
     onOpenTopSelling: () -> Unit,
     onOpenOrderRequests: () -> Unit
@@ -583,10 +579,6 @@ private fun HomeScreen(
     val s = LocalAppStrings.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(s.shopSummary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStat(s.spareParts, "${state.spareCount}", Modifier.weight(1f), onClick = onOpenSpare)
-            MiniStat(s.sales, "${state.salesCount}", Modifier.weight(1f), onClick = onOpenSales)
-        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MiniStat(s.totalItems, "${state.totalQty}", Modifier.weight(1f))
             MiniStat(s.lowStock, "${state.neededCount}", Modifier.weight(1f), alert = state.neededCount > 0, onClick = if (state.neededCount > 0) onOpenLowStock else null)
