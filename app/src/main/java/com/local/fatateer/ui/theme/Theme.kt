@@ -1,10 +1,12 @@
 package com.local.fatateer.ui.theme
 
+import android.graphics.Color as AndroidColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.local.fatateer.ui.locale.AccentColor
 
 private val Green = Color(0xFF0F3D3E)
@@ -41,6 +43,25 @@ private val DarkColors = darkColorScheme(
     onError = Color(0xFF3B0000)
 )
 
+/**
+ * يحوّل لون الثيم المختار إلى درجة داكنة/هادئة (Dark Mode) أو فاتحة/هادئة
+ * (Light Mode) لاستخدامها كخلفية للتطبيق، دون ألوان زاهية أو Neon.
+ * حساب بسيط عبر HSV يُنفَّذ فقط عند تغيّر اللون أو الوضع (لا Loop ولا Animation).
+ */
+private fun mutedBackgroundFor(accent: Color, darkTheme: Boolean): Color {
+    val hsv = FloatArray(3)
+    AndroidColor.colorToHSV(accent.toArgb(), hsv)
+    return if (darkTheme) {
+        hsv[1] = hsv[1].coerceAtMost(0.35f)
+        hsv[2] = 0.12f
+        Color(AndroidColor.HSVToColor(hsv))
+    } else {
+        hsv[1] = hsv[1].coerceAtMost(0.18f)
+        hsv[2] = 0.97f
+        Color(AndroidColor.HSVToColor(hsv))
+    }
+}
+
 @Composable
 fun FatateerTheme(
     darkTheme: Boolean,
@@ -55,7 +76,8 @@ fun FatateerTheme(
         secondary = accentColor.color.copy(alpha = 0.7f),
         tertiary = accentColor.color.copy(alpha = 0.5f),
         onPrimary = Color.White,
-        onSecondary = Color.White
+        onSecondary = Color.White,
+        background = mutedBackgroundFor(accentColor.color, darkTheme)
     )
 
     MaterialTheme(

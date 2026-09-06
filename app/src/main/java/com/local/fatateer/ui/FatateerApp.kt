@@ -717,10 +717,10 @@ private fun ItemThumbnail(item: Item, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun lowStockContainer(): Color = if (MaterialTheme.colorScheme.background.red < 0.2f) Color(0xFF3B1F1F) else Color(0xFFFFEBEE)
+private fun lowStockContainer(): Color = if (MaterialTheme.colorScheme.surface.red < 0.2f) Color(0xFF3B1F1F) else Color(0xFFFFEBEE)
 
 @Composable
-private fun lowStockContent(): Color = if (MaterialTheme.colorScheme.background.red < 0.2f) Color(0xFFFF8A80) else Color(0xFFC44536)
+private fun lowStockContent(): Color = if (MaterialTheme.colorScheme.surface.red < 0.2f) Color(0xFFFF8A80) else Color(0xFFC44536)
 
 @Composable
 private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit, isSelected: Boolean = false, showSellButton: Boolean = false, onSelect: () -> Unit = {}) {
