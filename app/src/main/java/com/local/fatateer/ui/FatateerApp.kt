@@ -637,12 +637,12 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                                     contentDescription = null,
                                     contentScale = ContentScale.Fit,
                                     colorFilter = ColorFilter.tint(salesCategoryImageTint()),
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(64.dp)
                                 )
                             } else {
-                                Icon(imageVector = categoryIcon(cat), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+                                Icon(imageVector = categoryIcon(cat), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
                             }
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(8.dp))
                             Text(displayLabel(cat, s), fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2, lineHeight = 16.sp)
                         }
                     }
