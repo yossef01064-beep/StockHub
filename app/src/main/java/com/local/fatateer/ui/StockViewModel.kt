@@ -302,7 +302,11 @@ class StockViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 // لا ننسخ ملفًا قديمًا بينما توجد بيانات مؤكدة في WAL.
-                db.query("PRAGMA wal_checkpoint(FULL)", null).close()
+                // ملاحظة: يجب فعليًا قراءة نتيجة الـcursor (moveToFirst) وإلا فإن Android
+                // ينفّذ الاستعلام بشكل كسول (Lazy) ولا يشغّل الـcheckpoint فعليًا، فيبقى
+                // ملف قاعدة البيانات الرئيسي (بما فيه رأس الملف وPRAGMA user_version) قديمًا
+                // بينما يكون التحديث الحقيقي موجودًا فقط داخل ملف WAL الذي لا يُنسخ ضمن النسخة الاحتياطية.
+                db.query("PRAGMA wal_checkpoint(FULL)", null).use { it.moveToFirst() }
                 dbFile.copyTo(snapshotFile, overwrite = true)
 
                 val imageFiles = imageDir.listFiles()?.filter { it.isFile }.orEmpty()
