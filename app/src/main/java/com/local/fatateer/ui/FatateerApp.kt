@@ -580,14 +580,13 @@ private fun HomeScreen(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(s.shopSummary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStat(s.totalItems, "${state.totalQty}", Modifier.weight(1f))
             MiniStat(s.lowStock, "${state.neededCount}", Modifier.weight(1f), alert = state.neededCount > 0, onClick = if (state.neededCount > 0) onOpenLowStock else null)
+            MiniStat(s.todayIncome, "${state.totalTodayIncome.toInt()}", Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStat(s.todayIncome, "${state.totalTodayIncome.toInt()}", Modifier.weight(1f))
             MiniStat(s.orderRequests, "${state.orderRequestsCount}", Modifier.weight(1f), onClick = onOpenOrderRequests)
+            MiniStat(s.topSellingItems, "${state.topSellingItems.size}", Modifier.weight(1f), onClick = onOpenTopSelling)
         }
-        MiniStat(s.topSellingItems, "${state.topSellingItems.size}", Modifier.fillMaxWidth(), onClick = onOpenTopSelling)
         if (state.neededCount > 0) {
             Text(s.lowStockHint.replace("%d", state.neededCount.toString()), fontSize = 13.sp, color = lowStockContent())
         } else {
