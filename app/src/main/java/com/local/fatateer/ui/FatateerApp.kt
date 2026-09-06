@@ -10,6 +10,8 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import android.graphics.Color as AndroidGraphicsColor
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,10 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -53,6 +58,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.local.fatateer.R
 import com.local.fatateer.data.Categories
 import com.local.fatateer.data.ImageStorage
 import com.local.fatateer.data.Item
@@ -624,7 +630,18 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                     val needed = inCat.count { it.quantity <= it.minQuantity }
                     Card(onClick = { onCategory(cat) }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (needed > 0) lowStockContainer() else MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.height(128.dp)) {
                         Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            Icon(imageVector = categoryIcon(cat), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+                            val salesImageRes = salesCategoryImages[cat]
+                            if (salesImageRes != null) {
+                                Image(
+                                    painter = painterResource(id = salesImageRes),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    colorFilter = ColorFilter.tint(salesCategoryImageTint()),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            } else {
+                                Icon(imageVector = categoryIcon(cat), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+                            }
                             Spacer(Modifier.height(10.dp))
                             Text(displayLabel(cat, s), fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2, lineHeight = 16.sp)
                         }
@@ -675,6 +692,47 @@ private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (
                 }
             }
         }
+    }
+}
+
+/**
+ * صور كروت الأقسام في قائمة البيع فقط (Monochrome، يتم تلوينها ديناميكيًا
+ * حسب Accent Color الحالي). أي قسم غير موجود هنا يبقى على أيقونته الحالية.
+ */
+private val salesCategoryImages: Map<String, Int> = mapOf(
+    "ريموتات" to R.drawable.cat_sale_remotes,
+    "رسيفرات" to R.drawable.cat_sale_receivers,
+    "عدسات دش" to R.drawable.cat_sale_dish_lens,
+    "عدسات رقمية" to R.drawable.cat_sale_digital_lens,
+    "كابلات" to R.drawable.cat_sale_cables,
+    "أدابتر 12V" to R.drawable.cat_sale_adapter,
+    "سماعات" to R.drawable.cat_sale_speakers,
+    "إكسسوار دش" to R.drawable.cat_sale_dish_accessories,
+    "بطاريات قلم 1.5V" to R.drawable.cat_sale_aa_battery,
+    "أطباق دش" to R.drawable.cat_sale_dish_plate,
+    "فلانشات طبق" to R.drawable.cat_sale_dish_flange,
+    "لفات سلاك دش" to R.drawable.cat_sale_wire_coil
+)
+
+/**
+ * يحسب درجة هادئة (غير Neon) من Accent Color الحالي لتلوين صور كروت
+ * الأقسام، مختلفة قليلًا بين Dark/Light Mode. حساب بسيط عبر HSV بدون
+ * أي State أو Animation إضافية — يُعاد حسابه تلقائيًا مع تغيّر الـTheme.
+ */
+@Composable
+private fun salesCategoryImageTint(): Color {
+    val accent = MaterialTheme.colorScheme.primary
+    val darkTheme = MaterialTheme.colorScheme.surface.red < 0.2f
+    val hsv = FloatArray(3)
+    AndroidGraphicsColor.colorToHSV(accent.toArgb(), hsv)
+    return if (darkTheme) {
+        hsv[1] = hsv[1].coerceAtMost(0.55f)
+        hsv[2] = hsv[2].coerceIn(0.72f, 0.85f)
+        Color(AndroidGraphicsColor.HSVToColor(hsv))
+    } else {
+        hsv[1] = hsv[1].coerceAtMost(0.80f)
+        hsv[2] = hsv[2].coerceAtMost(0.80f)
+        Color(AndroidGraphicsColor.HSVToColor(hsv))
     }
 }
 
