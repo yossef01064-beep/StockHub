@@ -630,13 +630,13 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                     val needed = inCat.count { it.quantity <= it.minQuantity }
                     Card(onClick = { onCategory(cat) }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (needed > 0) lowStockContainer() else MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.height(128.dp)) {
                         Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            val salesImageRes = salesCategoryImages[cat]
-                            if (salesImageRes != null) {
+                            val cardImageRes = categoryCardImages[cat]
+                            if (cardImageRes != null) {
                                 Image(
-                                    painter = painterResource(id = salesImageRes),
+                                    painter = painterResource(id = cardImageRes),
                                     contentDescription = null,
                                     contentScale = ContentScale.Fit,
-                                    colorFilter = ColorFilter.tint(salesCategoryImageTint()),
+                                    colorFilter = ColorFilter.tint(categoryCardImageTint()),
                                     modifier = Modifier.size(64.dp)
                                 )
                             } else {
@@ -696,10 +696,12 @@ private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (
 }
 
 /**
- * صور كروت الأقسام في قائمة البيع فقط (Monochrome، يتم تلوينها ديناميكيًا
- * حسب Accent Color الحالي). أي قسم غير موجود هنا يبقى على أيقونته الحالية.
+ * صور كروت الأقسام (قائمة البيع + قطع الغيار)، Monochrome ويتم تلوينها
+ * ديناميكيًا حسب Accent Color الحالي. أي قسم غير موجود هنا يبقى على
+ * أيقونته الحالية (Icon) دون أي تغيير.
  */
-private val salesCategoryImages: Map<String, Int> = mapOf(
+private val categoryCardImages: Map<String, Int> = mapOf(
+    // قائمة البيع
     "ريموتات" to R.drawable.cat_sale_remotes,
     "رسيفرات" to R.drawable.cat_sale_receivers,
     "عدسات دش" to R.drawable.cat_sale_dish_lens,
@@ -711,7 +713,14 @@ private val salesCategoryImages: Map<String, Int> = mapOf(
     "بطاريات قلم 1.5V" to R.drawable.cat_sale_aa_battery,
     "أطباق دش" to R.drawable.cat_sale_dish_plate,
     "فلانشات طبق" to R.drawable.cat_sale_dish_flange,
-    "لفات سلاك دش" to R.drawable.cat_sale_wire_coil
+    "لفات سلاك دش" to R.drawable.cat_sale_wire_coil,
+    // قطع الغيار
+    "IC TV" to R.drawable.cat_spare_ic_tv,
+    "IC فرتكال" to R.drawable.cat_spare_ic_vertical,
+    "IC الصوت" to R.drawable.cat_spare_ic_audio,
+    "أدوات" to R.drawable.cat_spare_tools,
+    "الدوائر الكاملة" to R.drawable.cat_spare_full_boards,
+    "المكثفات" to R.drawable.cat_spare_capacitors
 )
 
 /**
@@ -720,7 +729,7 @@ private val salesCategoryImages: Map<String, Int> = mapOf(
  * أي State أو Animation إضافية — يُعاد حسابه تلقائيًا مع تغيّر الـTheme.
  */
 @Composable
-private fun salesCategoryImageTint(): Color {
+private fun categoryCardImageTint(): Color {
     val accent = MaterialTheme.colorScheme.primary
     val darkTheme = MaterialTheme.colorScheme.surface.red < 0.2f
     val hsv = FloatArray(3)
