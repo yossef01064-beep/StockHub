@@ -629,7 +629,7 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                     val inCat = state.filtered.filter { it.category == cat }
                     val needed = inCat.count { it.quantity <= it.minQuantity }
                     Card(onClick = { onCategory(cat) }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = if (needed > 0) lowStockContainer() else MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), modifier = Modifier.height(128.dp)) {
-                        Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                             val cardImageRes = categoryCardImages[cat]
                             if (cardImageRes != null) {
                                 Image(
@@ -637,12 +637,12 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
                                     contentDescription = null,
                                     contentScale = ContentScale.Fit,
                                     colorFilter = ColorFilter.tint(categoryCardImageTint()),
-                                    modifier = Modifier.size(64.dp)
+                                    modifier = Modifier.size(72.dp)
                                 )
                             } else {
-                                Icon(imageVector = categoryIcon(cat), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
+                                Icon(imageVector = categoryIcon(cat), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(72.dp))
                             }
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(6.dp))
                             Text(displayLabel(cat, s), fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2, lineHeight = 16.sp)
                         }
                     }
@@ -788,6 +788,13 @@ private fun lowStockContainer(): Color = if (MaterialTheme.colorScheme.surface.r
 
 @Composable
 private fun lowStockContent(): Color = if (MaterialTheme.colorScheme.surface.red < 0.2f) Color(0xFFFF8A80) else Color(0xFFC44536)
+
+/**
+ * لون واضح وثابت للكتابة في سجل البيع فقط: أبيض في Dark Mode وأسود في
+ * Light Mode، بدل لون الثيم/Accent Color حتى يبقى مقروء دائمًا.
+ */
+@Composable
+private fun saleLogTextColor(): Color = if (MaterialTheme.colorScheme.surface.red < 0.2f) Color.White else Color.Black
 
 @Composable
 private fun ItemCard(item: Item, onPlus: () -> Unit, onMinus: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onSell: () -> Unit, isSelected: Boolean = false, showSellButton: Boolean = false, onSelect: () -> Unit = {}) {
@@ -1221,7 +1228,7 @@ private fun ExpandableDayGroup(
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text("${logs.size} ${s.operations} • ${total.toInt()} جنيه", color = MaterialTheme.colorScheme.secondary)
+                Text("${logs.size} ${s.operations} • ${total.toInt()} جنيه", color = saleLogTextColor())
             }
 
             AnimatedVisibility(
@@ -1270,7 +1277,7 @@ private fun SaleLogRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(log.itemName, fontWeight = FontWeight.Medium)
-            Text("${log.quantity} × ${log.price} جنيه", color = MaterialTheme.colorScheme.secondary)
+            Text("${log.quantity} × ${log.price} جنيه", color = saleLogTextColor())
         }
         IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, contentDescription = s.delete, tint = MaterialTheme.colorScheme.error)
