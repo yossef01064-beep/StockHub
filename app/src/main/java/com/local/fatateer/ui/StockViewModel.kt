@@ -91,6 +91,14 @@ data class StockUiState(
     val neededItems: List<Item>
         get() = items.filter { it.quantity <= it.minQuantity }
 
+    /** نواقص البيع فقط، بنفس منطق حساب النقص الحالي */
+    val neededSaleItems: List<Item>
+        get() = neededItems.filter { it.category in Categories.sales }
+
+    /** نواقص قطع الغيار فقط، بنفس منطق حساب النقص الحالي */
+    val neededSpareItems: List<Item>
+        get() = neededItems.filter { it.category in Categories.spareParts }
+
     val neededCount: Int get() = neededItems.size
     val spareCount: Int get() = items.count { it.category in Categories.spareParts }
     val salesCount: Int get() = items.count { it.category in Categories.sales }

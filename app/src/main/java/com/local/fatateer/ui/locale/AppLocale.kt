@@ -196,6 +196,10 @@ sealed class AppStrings {
     abstract val lowCountLabel: String
     abstract val lowStockListTitle: String
     abstract val noLowStockItems: String
+    abstract val lowStockSalesSection: String
+    abstract val lowStockSpareSection: String
+    abstract val noLowStockSaleItems: String
+    abstract val noLowStockSpareItems: String
     abstract val addPhoto: String
     abstract val changePhoto: String
     abstract val removePhoto: String
@@ -314,6 +318,10 @@ sealed class AppStrings {
         override val lowCountLabel = "ناقص: %d"
         override val lowStockListTitle = "الأصناف الناقصة"
         override val noLowStockItems = "مفيش أصناف ناقصة"
+        override val lowStockSalesSection = "نواقص البيع"
+        override val lowStockSpareSection = "نواقص قطع الغيار"
+        override val noLowStockSaleItems = "مفيش نواقص في البيع"
+        override val noLowStockSpareItems = "مفيش نواقص في قطع الغيار"
         override val addPhoto = "إضافة صورة"
         override val changePhoto = "تغيير الصورة"
         override val removePhoto = "إزالة الصورة"
@@ -449,6 +457,10 @@ sealed class AppStrings {
         override val lowCountLabel = "Low: %d"
         override val lowStockListTitle = "Low-stock items"
         override val noLowStockItems = "No low-stock items"
+        override val lowStockSalesSection = "Sales shortages"
+        override val lowStockSpareSection = "Spare parts shortages"
+        override val noLowStockSaleItems = "No sales shortages"
+        override val noLowStockSpareItems = "No spare parts shortages"
         override val addPhoto = "Add photo"
         override val changePhoto = "Change photo"
         override val removePhoto = "Remove photo"

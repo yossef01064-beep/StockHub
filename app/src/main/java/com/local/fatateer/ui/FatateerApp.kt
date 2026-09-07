@@ -19,6 +19,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -339,7 +341,7 @@ fun FatateerApp(
             onOpenLog = { showLog = true }
         )
     } else if (showLowStock) {
-                        LowStockScreen(items = state.neededItems, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, onSell = { itemToSell = it }, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp))
+                        LowStockScreen(saleItems = state.neededSaleItems, spareItems = state.neededSpareItems, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, onSell = { itemToSell = it }, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp))
     } else if (showTopSelling) {
         TopSellingScreen(state = state, onBack = { showTopSelling = false })
     } else if (showOrderRequests) {
@@ -672,24 +674,81 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
 }
 
 @Composable
-private fun LowStockScreen(items: List<Item>, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, modifier: Modifier = Modifier) {
+private fun LowStockScreen(saleItems: List<Item>, spareItems: List<Item>, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, modifier: Modifier = Modifier) {
     val s = LocalAppStrings.current
-    Column(modifier) {
-        if (items.isEmpty()) {
+    if (saleItems.isEmpty() && spareItems.isEmpty()) {
+        Column(modifier) {
             Text(s.noLowStockItems, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+        }
+        return
+    }
+    LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = modifier) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            LowStockSectionHeader(title = s.lowStockSalesSection, count = saleItems.size)
+        }
+        if (saleItems.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(s.noLowStockSaleItems, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 8.dp))
+            }
         } else {
-            LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
-                gridItems(items, key = { it.id }) { item ->
-                    ItemCard(
-                        item = item, 
-                        onPlus = { onPlus(item) }, 
-                        onMinus = { onMinus(item) }, 
-                        onEdit = { onEdit(item) }, 
-                        onDelete = { onDelete(item) }, 
-                        onSell = { onSell(item) },
-                        onSelect = {}
-                    )
-                }
+            gridItems(saleItems, key = { it.id }) { item ->
+                ItemCard(
+                    item = item,
+                    onPlus = { onPlus(item) },
+                    onMinus = { onMinus(item) },
+                    onEdit = { onEdit(item) },
+                    onDelete = { onDelete(item) },
+                    onSell = { onSell(item) },
+                    onSelect = {}
+                )
+            }
+        }
+
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            LowStockSectionHeader(title = s.lowStockSpareSection, count = spareItems.size, topPadding = 20.dp)
+        }
+        if (spareItems.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(s.noLowStockSpareItems, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+            }
+        } else {
+            gridItems(spareItems, key = { it.id }) { item ->
+                ItemCard(
+                    item = item,
+                    onPlus = { onPlus(item) },
+                    onMinus = { onMinus(item) },
+                    onEdit = { onEdit(item) },
+                    onDelete = { onDelete(item) },
+                    onSell = { onSell(item) },
+                    onSelect = {}
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LowStockSectionHeader(title: String, count: Int, topPadding: Dp = 0.dp) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = topPadding, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.width(8.dp))
+        if (count > 0) {
+            Surface(
+                color = lowStockContainer(),
+                contentColor = lowStockContent(),
+                shape = RoundedCornerShape(50)
+            ) {
+                Text(
+                    "$count",
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
             }
         }
     }
