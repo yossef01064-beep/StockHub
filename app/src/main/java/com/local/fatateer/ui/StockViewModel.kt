@@ -57,62 +57,65 @@ data class StockUiState(
             MainTab.SALES -> Categories.sales
         }
 
-    val filtered: List<Item>
-        get() {
-            var list = items
-            scopeCategories?.let { allowed ->
-                list = list.filter { it.category in allowed }
-            }
-            selectedCategory?.let { cat ->
-                list = list.filter { it.category == cat }
-            }
-            val q = query.trim()
-            if (q.isNotEmpty()) {
-                list = list.filter {
-                    it.name.contains(q, true) ||
-                        it.notes.contains(q, true) ||
-                        it.category.contains(q, true) ||
-                        it.subCategory.contains(q, true) ||
-                        it.brand.contains(q, true)
-                }
-            }
-            return list
+    // ملاحظة أداء: هذه الخصائص كانت get() تُعاد حسابها في كل مرة تُقرأ فيها
+    // (وبعض شاشات العرض تقرأها عدة مرات داخل نفس الرسم)، مما يعني تكرار
+    // نفس الفلترة/الفرز على كل قراءة أثناء أي إعادة تركيب (recomposition)،
+    // بما فيها ما يحدث عند تبديل الصفحة بالسحب. تحويلها إلى by lazy يجعلها
+    // تُحسب مرة واحدة فقط لكل نسخة StockUiState (أي مرة واحدة لكل تحديث
+    // بيانات فعلي)، بنفس القيم والمنطق تمامًا، دون أي تغيير في النتيجة.
+    val filtered: List<Item> by lazy {
+        var list = items
+        scopeCategories?.let { allowed ->
+            list = list.filter { it.category in allowed }
         }
+        selectedCategory?.let { cat ->
+            list = list.filter { it.category == cat }
+        }
+        val q = query.trim()
+        if (q.isNotEmpty()) {
+            list = list.filter {
+                it.name.contains(q, true) ||
+                    it.notes.contains(q, true) ||
+                    it.category.contains(q, true) ||
+                    it.subCategory.contains(q, true) ||
+                    it.brand.contains(q, true)
+            }
+        }
+        list
+    }
 
-    val grouped: Map<String, List<Item>>
-        get() = filtered.groupBy { item ->
+    val grouped: Map<String, List<Item>> by lazy {
+        filtered.groupBy { item ->
             if (item.subCategory.isNotBlank()) {
                 "${item.category} › ${item.subCategory}"
             } else {
                 item.category
             }
         }
+    }
 
-    val neededItems: List<Item>
-        get() = items.filter { it.quantity <= it.minQuantity }
+    val neededItems: List<Item> by lazy { items.filter { it.quantity <= it.minQuantity } }
 
     /** نواقص البيع فقط، بنفس منطق حساب النقص الحالي */
-    val neededSaleItems: List<Item>
-        get() = neededItems.filter { it.category in Categories.sales }
+    val neededSaleItems: List<Item> by lazy { neededItems.filter { it.category in Categories.sales } }
 
     /** نواقص قطع الغيار فقط، بنفس منطق حساب النقص الحالي */
-    val neededSpareItems: List<Item>
-        get() = neededItems.filter { it.category in Categories.spareParts }
+    val neededSpareItems: List<Item> by lazy { neededItems.filter { it.category in Categories.spareParts } }
 
     val neededCount: Int get() = neededItems.size
-    val spareCount: Int get() = items.count { it.category in Categories.spareParts }
-    val salesCount: Int get() = items.count { it.category in Categories.sales }
-    val totalQty: Int get() = items.sumOf { it.quantity }
+    val spareCount: Int by lazy { items.count { it.category in Categories.spareParts } }
+    val salesCount: Int by lazy { items.count { it.category in Categories.sales } }
+    val totalQty: Int by lazy { items.sumOf { it.quantity } }
     val todayStart: Long get() = System.currentTimeMillis() - (System.currentTimeMillis() % (24 * 60 * 60 * 1000))
     
     // Expose the todayStart to StockUiState
     val todayStartForUi: Long get() = todayStart
 
     // إحصائيات جديدة
-    val totalTodayIncome: Double get() = logs.filter { it.timestamp >= todayStart }.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity }
-    val topSellingItems: List<TopSellingItem> get() = calculateTopSellingItems(logs)
-    val lowStockSparePartsCount: Int get() = items.count { it.category in Categories.spareParts && it.quantity <= it.minQuantity }
-    val lowStockSalesCount: Int get() = items.count { it.category in Categories.sales && it.quantity <= it.minQuantity }
+    val totalTodayIncome: Double by lazy { logs.filter { it.timestamp >= todayStart }.sumOf { (it.price.toDoubleOrNull() ?: 0.0) * it.quantity } }
+    val topSellingItems: List<TopSellingItem> by lazy { calculateTopSellingItems(logs) }
+    val lowStockSparePartsCount: Int by lazy { items.count { it.category in Categories.spareParts && it.quantity <= it.minQuantity } }
+    val lowStockSalesCount: Int by lazy { items.count { it.category in Categories.sales && it.quantity <= it.minQuantity } }
     val orderRequestsCount: Int get() = orderRequests.size
 
     private fun calculateTopSellingItems(logs: List<SaleLog>): List<TopSellingItem> {

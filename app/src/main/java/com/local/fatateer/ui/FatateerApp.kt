@@ -347,8 +347,18 @@ fun FatateerApp(
     } else if (showOrderRequests) {
         OrderRequestsScreen(state = state, vm = vm, onBack = { showOrderRequests = false })
                     } else {
-                        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                            when (MainTab.values()[page]) {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            // تجهيز الصفحة المجاورة مسبقًا قبل بدء السحب فعليًا،
+                            // بدل تركيبها لأول مرة أثناء حركة الإصبع (وهو ما كان
+                            // يسبب التقطيع/التهنيج عند بداية كل Swipe). لا يغيّر
+                            // هذا أي بيانات أو سلوك، فقط توقيت التركيب.
+                            beyondViewportPageCount = 1,
+                            key = { page -> page }
+                        ) { page ->
+                            val tab = remember(page) { MainTab.entries[page] }
+                            when (tab) {
                                 MainTab.HOME -> HomeScreen(
                                     state = state,
                                     modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -358,9 +368,9 @@ fun FatateerApp(
                                 )
                                 MainTab.SPARE, MainTab.SALES -> InventoryScreen(
                                     state = state,
-                                    chipCats = if (MainTab.values()[page] == MainTab.SPARE) Categories.spareParts else Categories.sales,
+                                    chipCats = if (tab == MainTab.SPARE) Categories.spareParts else Categories.sales,
                                     onQuery = vm::setQuery, onCategory = vm::setCategory, onPlus = vm::plus, onMinus = vm::minus, onEdit = { editor = it }, onDelete = { toDelete = it }, onSell = { itemToSell = it },
-                                    showSellButton = (MainTab.values()[page] == MainTab.SALES),
+                                    showSellButton = (tab == MainTab.SALES),
                                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
