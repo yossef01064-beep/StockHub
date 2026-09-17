@@ -673,55 +673,52 @@ private fun InventoryScreen(state: StockUiState, chipCats: List<String>, onQuery
     }
 }
 
+private enum class LowStockTab { SALES, SPARE }
+
 @Composable
 private fun LowStockScreen(saleItems: List<Item>, spareItems: List<Item>, onPlus: (Item) -> Unit, onMinus: (Item) -> Unit, onEdit: (Item) -> Unit, onDelete: (Item) -> Unit, onSell: (Item) -> Unit, modifier: Modifier = Modifier) {
     val s = LocalAppStrings.current
+    var selectedTab by remember { mutableStateOf(LowStockTab.SALES) }
+
     if (saleItems.isEmpty() && spareItems.isEmpty()) {
         Column(modifier) {
             Text(s.noLowStockItems, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
         }
         return
     }
-    LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = modifier) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            LowStockSectionHeader(title = s.lowStockSalesSection, count = saleItems.size)
-        }
-        if (saleItems.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(s.noLowStockSaleItems, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 8.dp))
-            }
-        } else {
-            gridItems(saleItems, key = { it.id }) { item ->
-                ItemCard(
-                    item = item,
-                    onPlus = { onPlus(item) },
-                    onMinus = { onMinus(item) },
-                    onEdit = { onEdit(item) },
-                    onDelete = { onDelete(item) },
-                    onSell = { onSell(item) },
-                    onSelect = {}
-                )
+
+    Column(modifier = modifier) {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.Center) {
+            SingleChoiceSegmentedButtonRow {
+                SegmentedButton(selected = selectedTab == LowStockTab.SALES, onClick = { selectedTab = LowStockTab.SALES }, shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)) {
+                    Text("${s.lowStockSalesSection} (${saleItems.size})")
+                }
+                SegmentedButton(selected = selectedTab == LowStockTab.SPARE, onClick = { selectedTab = LowStockTab.SPARE }, shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)) {
+                    Text("${s.lowStockSpareSection} (${spareItems.size})")
+                }
             }
         }
 
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            LowStockSectionHeader(title = s.lowStockSpareSection, count = spareItems.size, topPadding = 20.dp)
+        val (currentItems, emptyMessage) = when (selectedTab) {
+            LowStockTab.SALES -> saleItems to s.noLowStockSaleItems
+            LowStockTab.SPARE -> spareItems to s.noLowStockSpareItems
         }
-        if (spareItems.isEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(s.noLowStockSpareItems, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
-            }
+
+        if (currentItems.isEmpty()) {
+            Text(emptyMessage, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
         } else {
-            gridItems(spareItems, key = { it.id }) { item ->
-                ItemCard(
-                    item = item,
-                    onPlus = { onPlus(item) },
-                    onMinus = { onMinus(item) },
-                    onEdit = { onEdit(item) },
-                    onDelete = { onDelete(item) },
-                    onSell = { onSell(item) },
-                    onSelect = {}
-                )
+            LazyVerticalGrid(columns = GridCells.Fixed(2), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 88.dp), modifier = Modifier.fillMaxSize()) {
+                gridItems(currentItems, key = { it.id }) { item ->
+                    ItemCard(
+                        item = item,
+                        onPlus = { onPlus(item) },
+                        onMinus = { onMinus(item) },
+                        onEdit = { onEdit(item) },
+                        onDelete = { onDelete(item) },
+                        onSell = { onSell(item) },
+                        onSelect = {}
+                    )
+                }
             }
         }
     }
@@ -837,7 +834,22 @@ private fun ItemThumbnail(item: Item, modifier: Modifier = Modifier) {
         if (!path.isNullOrBlank() && File(path).exists()) {
             AsyncImage(model = File(path), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
-            Icon(imageVector = categoryIcon(item.category), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            // لا يوجد للمنتج صورة مختارة: نستخدم نفس صورة القسم الحالية المعروضة
+            // في واجهة الأقسام (categoryCardImages)، وليس نسخة قديمة منفصلة، حتى
+            // يتحدّث تلقائيًا مع أي تغيير مستقبلي لصورة القسم. إن لم يكن للقسم
+            // صورة مخصصة، نرجع لأيقونته كما كان سابقًا.
+            val cardImageRes = categoryCardImages[item.category]
+            if (cardImageRes != null) {
+                Image(
+                    painter = painterResource(id = cardImageRes),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    colorFilter = ColorFilter.tint(categoryCardImageTint()),
+                    modifier = Modifier.size(40.dp)
+                )
+            } else {
+                Icon(imageVector = categoryIcon(item.category), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            }
         }
     }
 }
